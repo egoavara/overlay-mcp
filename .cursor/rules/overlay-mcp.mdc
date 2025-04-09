@@ -1,0 +1,47 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# overlay-mcp
+
+overlay-mcp는 mcp 의 sse 프로토콜로 작동하는 어플리케이션을 위한 리버스 프록시이다.
+overlay-mcp에서는 리버스 프록시 역활과 그 과정에서 mcp authorization 을 구현해 주는 역활을 한다.
+
+단 인증 시스템은 직접 구현하지 않고 외부 Idp를 이용해 로그인한다.
+
+예를 들어 리버스 프록시는 `https://dex.example.net` 에 dex 서버가 있다고 가정하면 해당 인증 서버를 이용해 로그인을 수행하는 식으로 구현되어야 한다.
+
+## MCP 프로토콜
+
+### MCP Authorization
+[mcp-authorization.mdc](mdc:.cursor/rules/mcp-authorization.mdc) 문서를 참조해 구현한다.
+
+## 스택
+
+- rust
+- clap: CLI 인자 처리
+- axum: 웹 서버 프레임워크
+- oauth2: OAuth2.0 및 PKCE 구현 (RFC 6749, RFC 7636)
+- reqwest: HTTP 클라이언트
+- tower: 미들웨어 및 서비스 추상화
+- tracing: 로깅
+
+## 어플리케이션
+
+어플리케이션 사용법은 아래와 같다.
+```bash
+overlay-mcp start --port 9090 --proxy 10.0.0.1:9090 --openid-connect 'http://dex.example.net'
+```
+
+이렇게 실행하면 `http://10.0.0.1:9090/sse`로 접속하는 경우 [mcp-authorization.mdc](mdc:.cursor/rules/mcp-authorization.mdc) 문서에 정의된 대로 `http://dex.example.net`을 이용해 로그인하게 만드는 것이 목표이다.
+
+## 인증 흐름
+
+1. 클라이언트가 `/sse` 엔드포인트에 접근
+2. 인증이 필요한 경우 401 응답과 함께 OAuth2.0 인증 URL 반환
+3. 클라이언트는 브라우저를 통해 인증 수행 (PKCE 사용)
+4. 인증 완료 후 콜백으로 인증 코드 수신
+5. 인증 코드를 이용해 액세스 토큰 발급
+6. 발급된 토큰으로 MCP 인증 수행
