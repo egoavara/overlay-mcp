@@ -197,28 +197,24 @@ const httpRoute = new apiextensions.CustomResource("overlay-mcp-route", {
             {
                 matches: [
                     {
-                        method: "GET",
                         path: {
                             type: "PathPrefix",
                             value: "/.well-known",
                         },
                     },
                     {
-                        method: "GET",
                         path: {
                             type: "PathPrefix",
                             value: "/oauth2",
                         },
                     },
                     {
-                        method: "GET",
                         path: {
                             type: "Exact",
                             value: "/sse",
                         },
                     },
                     {
-                        method: "GET",
                         path: {
                             type: "Exact",
                             value: "/message",

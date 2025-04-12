@@ -96,20 +96,7 @@ async fn main() -> Result<()> {
     }
 
     // 라우터 설정
-    let mut router = handler::router()
-        .with_state(state)
-        .layer(trace_layer())
-        .layer(
-            CorsLayer::new()
-                .allow_methods([
-                    Method::GET,
-                    Method::POST,
-                    Method::PUT,
-                    Method::DELETE,
-                    Method::OPTIONS,
-                ])
-                .allow_origin(Any),
-        );
+    let mut router = handler::router().with_state(state).layer(trace_layer());
 
     if config.application.health_check {
         let health = Health::builder().build();
@@ -128,6 +115,17 @@ async fn main() -> Result<()> {
             )
             .layer(prometheus_layer);
     }
+    router = router.layer(
+        CorsLayer::new()
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_origin(Any),
+    );
 
     // 서버 주소 설정 (config 사용)
     tracing::info!("Server started at: {}", config.server.addr);
