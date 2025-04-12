@@ -35,11 +35,12 @@ async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
     let cli: Command = Command::parse();
     let configfile = cli.configfile.clone();
+    let log_filter = cli.log_filter.clone();
 
     // 로깅 초기화
     let env_filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
-        .parse("")
+        .parse(log_filter)
         .unwrap();
 
     tracing_subscriber::fmt().with_env_filter(env_filter).init();

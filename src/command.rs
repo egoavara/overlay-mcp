@@ -14,6 +14,9 @@ pub struct Command {
     #[arg(short, long = "config", env = "OVERLAY_MCP_CONFIG_FILE")]
     pub configfile: Option<PathBuf>,
 
+    #[arg(short,long = "log-filter", env = "OVERLAY_MCP_LOG_FILTER", default_value_t = String::from("warn"))]
+    pub log_filter: String,
+
     #[arg(long = "host", env = "OVERLAY_MCP_SERVER_HOST", default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090))]
     pub addr: SocketAddr,
 

@@ -15,7 +15,9 @@
             },
             "args": [
                 "-c",
-                "examples/config/config.json"
+                "examples/config/config.json",
+                "--log-filter",
+                "debug"
             ]
         }
     ]
