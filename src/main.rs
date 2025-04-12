@@ -33,17 +33,16 @@ use figment::{
 async fn main() -> Result<()> {
     // dotenv 파일을 이용한 환경변수 주입
     let _ = dotenvy::dotenv();
+    let cli: Command = Command::parse();
+    let configfile = cli.configfile.clone();
+
     // 로깅 초기화
     let env_filter = EnvFilter::builder()
-        .with_env_var("OVERLAY_MCP_LOG")
         .with_default_directive(LevelFilter::INFO.into())
         .parse("")
         .unwrap();
 
     tracing_subscriber::fmt().with_env_filter(env_filter).init();
-
-    let cli: Command = Command::parse();
-    let configfile = cli.configfile.clone();
 
     // 설정 로드 (Figment 사용)
     let mut config_loader: Figment = Figment::new();
