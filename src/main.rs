@@ -96,18 +96,20 @@ async fn main() -> Result<()> {
     }
 
     // 라우터 설정
-    let layer = ServiceBuilder::new().layer(trace_layer()).layer(
-        CorsLayer::new()
-            .allow_methods([
-                Method::GET,
-                Method::POST,
-                Method::PUT,
-                Method::DELETE,
-                Method::OPTIONS,
-            ])
-            .allow_origin(Any),
-    );
-    let mut router = handler::router().with_state(state).layer(layer);
+    let mut router = handler::router()
+        .with_state(state)
+        .layer(trace_layer())
+        .layer(
+            CorsLayer::new()
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
+                .allow_origin(Any),
+        );
 
     if config.application.health_check {
         let health = Health::builder().build();
