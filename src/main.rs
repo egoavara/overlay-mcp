@@ -108,18 +108,7 @@ async fn main() -> Result<()> {
             )
             .layer(prometheus_layer);
     }
-    router = router.layer(
-        CorsLayer::new()
-            .allow_methods([
-                Method::GET,
-                Method::POST,
-                Method::PUT,
-                Method::DELETE,
-                Method::OPTIONS,
-            ])
-            .allow_origin(Any),
-    );
-
+    router = router.layer(CorsLayer::permissive());
     // 서버 주소 설정 (config 사용)
     tracing::info!("Server started at: {}", config.server.addr);
 
