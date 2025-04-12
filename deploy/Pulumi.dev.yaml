@@ -1,0 +1,16 @@
+encryptionsalt: v1:7vX/EP/6wCE=:v1:zBc8jje59/dMN/fd:4AlnZkikyD4cpWjABBjFF8xSdGobuQ==
+config:
+  kubernetes:context: admin@kubernetes-egoavara-net
+  overlay-mcp:oidcIssuer:
+    secure: v1:qlfWvQ9W9gffel+J:eyh7v0766o3eWkqRNabWyUzIjFkutA6eTZajOGQmqgPuucYG9z+ltg==
+  overlay-mcp:oidcClientId:
+    secure: v1:nQ8DNZf37D4G849k:TWoybjTPE6hVNpBSCC2k8/IYuYN/jg==
+  overlay-mcp:oidcClientSecret:
+    secure: v1:HG1Ox1/TD0N+J1Ki:LL9jvYohjJbTB0xvcaMhBWM0qeyUv4Hmn/9fah9RyHsfARTfEWI73Q==
+  overlay-mcp:oidcScopes: openid,email,profile,groups
+  overlay-mcp:hostname: https://mcp-db.egoavara.net
+  overlay-mcp:upstream: http://mcp-db.runtime.svc.cluster.local
+  overlay-mcp:defaultGatewayName:
+    secure: v1:O3Z0Y1swE9+Iqsrm:nzb96BQRkZUusNEnIXiJvuX3/nGRPOM=
+  overlay-mcp:defaultGatewayNamespace:
+    secure: v1:1/nh+k3hhuS4ee8/:TOHb/IQjMw8aVwGnOfN5oxFPRvpvOglR709xVg==

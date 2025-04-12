@@ -4,14 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+async-trait = "0.1"
+url = { version = "2.5", features = ["serde"] }
 hyper = { version = "1.6", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 uuid = { version = "1.16", features = ["v4", "v7", "serde"] }
-axum = {version = "0.8", features = ["macros"]}
+axum = { version = "0.8", features = ["macros"] }
 axum-extra = { version = "0.10", features = ["cookie"] }
 tokio = { version = "1.0", features = ["full"] }
-clap = { version = "4.5", features = ["derive"] }
-http = "1.0"
+http = { version = "1.0" }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "cors"] }
 tracing = "0.1"
@@ -30,3 +31,9 @@ sha2 = "0.10"
 openidconnect = { version = "4.0", features = ["reqwest"] }
 jsonwebtoken = { version = "9.3", features = [] }
 chrono = { version = "0.4", features = ["serde"] }
+figment = { version = "0.10", features = ["json", "env"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+dotenvy = "0.15"
+json-patch = { version = "4" }
+redact = { version = "0.1", features = ["serde", "zeroize"] }
+zeroize={version="1.7", features=["std"]}

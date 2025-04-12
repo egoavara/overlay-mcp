@@ -14,24 +14,8 @@
                 ]
             },
             "args": [
-                "--host",
-                "http://localhost:9090",
-                "--proxy",
-                "http://192.168.220.13",
-                "--openid-connect",
-                "https://dex.egoavara.net",
-                "--client-id",
-                "mcp-db",
-                "--client-secret",
-                "tqbILcHlCVFC1ZeCSEe5414W",
-                "--scope",
-                "openid",
-                "--scope",
-                "email",
-                "--scope",
-                "profile",
-                "--scope",
-                "groups",
+                "-c",
+                "examples/config/config.json"
             ]
         }
     ]

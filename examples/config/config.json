@@ -1,0 +1,12 @@
+{
+    "server": {
+        "addr": "0.0.0.0:9090",
+        "hostname": "https://mcp-db.egoavara.net",
+        "upstream": "http://192.168.220.13"
+    },
+    "oidc": {
+        "issuer": "https://dex.egoavara.net",
+        "client_id": "mcp-db",
+        "scopes": ["openid", "email", "profile", "groups"]
+    }
+}
