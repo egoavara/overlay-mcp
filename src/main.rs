@@ -35,15 +35,6 @@ async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
     let cli: Command = Command::parse();
     let configfile = cli.configfile.clone();
-    let log_filter = cli.log_filter.clone();
-
-    // 로깅 초기화
-    let env_filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .parse(log_filter)
-        .unwrap();
-
-    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     // 설정 로드 (Figment 사용)
     let mut config_loader: Figment = Figment::new();
@@ -55,7 +46,20 @@ async fn main() -> Result<()> {
         .extract()
         .context("Failed to load configuration")?;
 
+    // 로깅 필터 설정
+    let env_filter = config
+        .application
+        .as_ref()
+        .and_then(|app| app.log_filter.clone())
+        .unwrap_or("warn".to_string())
+        .parse::<EnvFilter>()
+        .unwrap();
+
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
     tracing::info!("{}", serde_json::to_string_pretty(&config).unwrap());
+
+    // 상태 설정
+
     let config = Arc::new(config);
 
     let http_client = reqwest::ClientBuilder::new()

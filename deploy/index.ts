@@ -14,6 +14,9 @@ const overlayMcpConfig = new core.v1.ConfigMap("overlay-mcp-config", {
     data: {
         "run.sh": output(fs.readFileSync("./run.sh", "utf-8")),
         "config.json": output({
+            "application": {
+                "log_filter": config.get("log_filter") || "info"
+            },
             "server": {
                 "addr": "0.0.0.0:9090",
                 "hostname": config.get("hostname"),

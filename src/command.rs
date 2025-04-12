@@ -81,6 +81,9 @@ impl Provider for Command {
 
     fn data(&self) -> figment::Result<FigmentMap<Profile, Dict>> {
         let mut data = json!({
+            "application": {
+                "log_filter": self.log_filter,
+            },
             "server": {
                 "addr": self.addr,
                 "hostname": self.hostname,

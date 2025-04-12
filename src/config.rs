@@ -8,10 +8,16 @@ use url::Url;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
+    pub application: Option<ApplicationConfig>,
     pub server: ServerConfig,
     pub oidc: OpenIDConnectConfig,
     pub storage: Option<Authorization>,
     pub otel: Option<OpenTelemetryConfig>,
+}
+
+#[derive(Parser, Debug, Clone, Deserialize, Serialize)]
+pub struct ApplicationConfig {
+    pub log_filter: Option<String>,
 }
 
 #[derive(Parser, Debug, Clone, Deserialize, Serialize)]
