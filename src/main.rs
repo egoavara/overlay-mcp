@@ -13,7 +13,7 @@ use command::Command;
 use config::Config;
 use handler::AppState;
 use http::Method;
-use middleware::JwtMiddlewareState;
+use middleware::{trace_layer, JwtMiddlewareState};
 use openidconnect::core::CoreProviderMetadata;
 use openidconnect::IssuerUrl;
 use std::sync::Arc;
@@ -58,7 +58,10 @@ async fn main() -> Result<()> {
         .parse::<EnvFilter>()
         .unwrap();
 
-    tracing_subscriber::fmt().with_env_filter(env_filter).init();
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_env_filter(env_filter)
+        .init();
     tracing::info!("{}", serde_json::to_string_pretty(&config).unwrap());
 
     // 상태 설정
@@ -93,29 +96,17 @@ async fn main() -> Result<()> {
     }
 
     // 라우터 설정
-    let layer = ServiceBuilder::new()
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new())
-                .on_response(
-                    DefaultOnResponse::new()
-                        .level(Level::INFO)
-                        .latency_unit(LatencyUnit::Seconds)
-                        .include_headers(true),
-                )
-                .on_request(DefaultOnRequest::new().level(Level::INFO)),
-        )
-        .layer(
-            CorsLayer::new()
-                .allow_methods([
-                    Method::GET,
-                    Method::POST,
-                    Method::PUT,
-                    Method::DELETE,
-                    Method::OPTIONS,
-                ])
-                .allow_origin(Any),
-        );
+    let layer = ServiceBuilder::new().layer(trace_layer()).layer(
+        CorsLayer::new()
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_origin(Any),
+    );
     let mut router = handler::router().with_state(state).layer(layer);
 
     if config.application.health_check {
