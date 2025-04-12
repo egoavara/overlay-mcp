@@ -137,7 +137,7 @@ async fn main() -> Result<()> {
     }
 
     // 서버 주소 설정 (config 사용)
-    tracing::info!("서버가 시작되었습니다: {}", config.server.addr);
+    tracing::info!("Server started at: {}", config.server.addr);
 
     // 서버 실행
     let listener = tokio::net::TcpListener::bind(config.server.addr).await?;
