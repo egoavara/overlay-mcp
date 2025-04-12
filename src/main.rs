@@ -40,12 +40,11 @@ async fn main() -> Result<()> {
     let configfile = cli.configfile.clone();
 
     // 설정 로드 (Figment 사용)
-    let mut config_loader: Figment = Figment::new();
-    if let Some(configfile) = &cli.configfile {
+    let mut config_loader: Figment = Figment::new().merge(cli);
+    if let Some(configfile) = &configfile {
         config_loader = config_loader.merge(FigmentJson::file(configfile));
     }
     let config: Config = config_loader
-        .merge(cli)
         .extract()
         .context("Failed to load configuration")?;
 

@@ -1,4 +1,7 @@
 {
+    "application": {
+        "log_filter": "info"
+    },
     "server": {
         "addr": "0.0.0.0:9090",
         "hostname": "https://mcp-db.egoavara.net",

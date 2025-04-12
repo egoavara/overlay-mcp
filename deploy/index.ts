@@ -17,6 +17,7 @@ const overlayMcpConfig = new core.v1.ConfigMap("overlay-mcp-config", {
             "application": {
                 "log_filter": config.get("log_filter") || "info",
                 "prometheus": true,
+                "health_check": true,
             },
             "server": {
                 "addr": "0.0.0.0:9090",
@@ -88,6 +89,28 @@ const deployment = new apps.v1.Deployment("overlay-mcp", {
                                 protocol: "TCP",
                             }
                         ],
+                        readinessProbe: {
+                            httpGet: {
+                                path: "/.meta/health",
+                                port: 9090,
+                            },
+                            initialDelaySeconds: 30,
+                            periodSeconds: 5,
+                            failureThreshold: 20,
+                            successThreshold: 1,
+                            timeoutSeconds: 10,
+                        },
+                        livenessProbe: {
+                            httpGet: {
+                                path: "/.meta/health",
+                                port: 9090,
+                            },
+                            initialDelaySeconds: 30,
+                            periodSeconds: 5,
+                            failureThreshold: 20,
+                            successThreshold: 1,
+                            timeoutSeconds: 10,
+                        },
                         volumeMounts: [
                             {
                                 name: "overlay-mcp",
@@ -172,6 +195,36 @@ const httpRoute = new apiextensions.CustomResource("overlay-mcp-route", {
         }],
         rules: [
             {
+                matches: [
+                    {
+                        method: "GET",
+                        path: {
+                            type: "PathPrefix",
+                            value: "/.well-known",
+                        },
+                    },
+                    {
+                        method: "GET",
+                        path: {
+                            type: "PathPrefix",
+                            value: "/oauth2",
+                        },
+                    },
+                    {
+                        method: "GET",
+                        path: {
+                            type: "Exact",
+                            value: "/sse",
+                        },
+                    },
+                    {
+                        method: "GET",
+                        path: {
+                            type: "Exact",
+                            value: "/message",
+                        },
+                    },
+                ],
                 backendRefs: [{
                     kind: "Service",
                     name: serviceProxy.metadata.name,
