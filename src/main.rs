@@ -1,7 +1,7 @@
+mod command;
 mod config;
 mod handler;
 mod middleware;
-mod command;
 
 use anyhow::{Context, Result};
 use axum::Router;
@@ -16,7 +16,12 @@ use openidconnect::IssuerUrl;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::TraceLayer;
+use tower_http::trace::DefaultOnResponse;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, TraceLayer};
+use tower_http::LatencyUnit;
+use tracing::level_filters::LevelFilter;
+use tracing::Level;
+use tracing_subscriber::EnvFilter;
 
 // figment 및 Config 추가
 use figment::{
@@ -29,7 +34,13 @@ async fn main() -> Result<()> {
     // dotenv 파일을 이용한 환경변수 주입
     let _ = dotenvy::dotenv();
     // 로깅 초기화
-    tracing_subscriber::fmt::init();
+    let env_filter = EnvFilter::builder()
+        .with_env_var("OVERLAY_MCP_LOG")
+        .with_default_directive(LevelFilter::INFO.into())
+        .parse("")
+        .unwrap();
+
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     let cli: Command = Command::parse();
     let configfile = cli.configfile.clone();
@@ -77,17 +88,30 @@ async fn main() -> Result<()> {
     // 라우터 설정
     let app = Router::new()
         .merge(handler::router())
-        .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()))
         .layer(
-            CorsLayer::new()
-                .allow_methods([
-                    Method::GET,
-                    Method::POST,
-                    Method::PUT,
-                    Method::DELETE,
-                    Method::OPTIONS,
-                ])
-                .allow_origin(Any),
+            ServiceBuilder::new()
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(DefaultMakeSpan::new())
+                        .on_response(
+                            DefaultOnResponse::new()
+                                .level(Level::INFO)
+                                .latency_unit(LatencyUnit::Seconds)
+                                .include_headers(true),
+                        )
+                        .on_request(DefaultOnRequest::new().level(Level::INFO)),
+                )
+                .layer(
+                    CorsLayer::new()
+                        .allow_methods([
+                            Method::GET,
+                            Method::POST,
+                            Method::PUT,
+                            Method::DELETE,
+                            Method::OPTIONS,
+                        ])
+                        .allow_origin(Any),
+                ),
         )
         .with_state(state);
 

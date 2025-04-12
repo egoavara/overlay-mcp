@@ -71,6 +71,35 @@ const deployment = new apps.v1.Deployment("overlay-mcp", {
                 ],
                 containers: [
                     {
+                        name: "overlay-mcp",
+                        image: "rust:1.86-bookworm",
+                        command: [
+                            "/bin/bash",
+                            "-c",
+                            "/data/run-sh/run.sh"
+                        ],
+                        ports: [
+                            {
+                                containerPort: 9090,
+                                protocol: "TCP",
+                            }
+                        ],
+                        volumeMounts: [
+                            {
+                                name: "overlay-mcp",
+                                mountPath: "/data/overlay-mcp",
+                            },
+                            {
+                                name: "run-sh",
+                                mountPath: "/data/run-sh",
+                            },
+                            {
+                                name: "git-sync",
+                                mountPath: "/data/git-sync",
+                            }
+                        ]
+                    },
+                    {
                         name: "git-sync",
                         image: "registry.k8s.io/git-sync/git-sync:v4.4.0",
                         env: [
@@ -98,29 +127,6 @@ const deployment = new apps.v1.Deployment("overlay-mcp", {
                             }
                         ]
                     },
-                    {
-                        name: "overlay-mcp",
-                        image: "rust:1.86-bookworm",
-                        command: [
-                            "/bin/bash",
-                            "-c",
-                            "/data/run-sh/run.sh"
-                        ],
-                        volumeMounts: [
-                            {
-                                name: "overlay-mcp",
-                                mountPath: "/data/overlay-mcp",
-                            },
-                            {
-                                name: "run-sh",
-                                mountPath: "/data/run-sh",
-                            },
-                            {
-                                name: "git-sync",
-                                mountPath: "/data/git-sync",
-                            }
-                        ]
-                    }
                 ]
             }
         }

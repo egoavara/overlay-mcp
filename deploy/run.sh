@@ -6,4 +6,5 @@ cargo install --locked watchexec-cli
 
 watchexec \
     --exts rs \
-    -- 'cargo run --release --bin overlay-mcp -- --config /data/overlay-mcp/config.json'
+    --poll 5s \
+    -- 'cd /data/git-sync/overlay-mcp.git && cargo run --bin overlay-mcp -- --config /data/overlay-mcp/config.json'

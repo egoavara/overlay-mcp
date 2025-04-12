@@ -26,8 +26,8 @@ pub(crate) async fn handler(
 
     let authorization_endpoint = hostname.join("/oauth2/auth").unwrap();
     let token_endpoint = hostname.join("/oauth2/token").unwrap();
-    let registration_endpoint = hostname.join("/oauth2/client/register").unwrap();
-
+    let registration_endpoint = hostname.join("/oauth2/client").unwrap();
+    
     Json(WellKnownResponse {
         issuer: issuer.clone(),
         authorization_endpoint: authorization_endpoint.to_string(),

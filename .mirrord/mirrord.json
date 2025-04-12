@@ -1,0 +1,18 @@
+{
+    "target": {
+        "namespace": "runtime",
+        "path": {
+            "pod": "overlay-mcp-c9d74797b-ddc44",
+            "container": "overlay-mcp"
+        }
+    },
+    "feature": {
+        "network": {
+            "incoming": {
+                "mode": "steal"
+            },
+            "outgoing": true
+        },
+        "env": true
+    }
+}

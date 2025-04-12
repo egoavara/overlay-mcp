@@ -1,5 +1,4 @@
 use clap::Parser;
-use redact::serde::redact_secret;
 use redact::Secret;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
