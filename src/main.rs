@@ -4,7 +4,10 @@ mod handler;
 mod middleware;
 
 use anyhow::{Context, Result};
+use axum::routing::get;
 use axum::Router;
+use axum_health::Health;
+use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::Command;
 use config::Config;
@@ -49,8 +52,9 @@ async fn main() -> Result<()> {
     // 로깅 필터 설정
     let env_filter = config
         .application
+        .log_filter
         .as_ref()
-        .and_then(|app| app.log_filter.clone())
+        .cloned()
         .unwrap_or("warn".to_string())
         .parse::<EnvFilter>()
         .unwrap();
@@ -90,41 +94,55 @@ async fn main() -> Result<()> {
     }
 
     // 라우터 설정
-    let app = Router::new()
-        .merge(handler::router())
+    let layer = ServiceBuilder::new()
         .layer(
-            ServiceBuilder::new()
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(DefaultMakeSpan::new())
-                        .on_response(
-                            DefaultOnResponse::new()
-                                .level(Level::INFO)
-                                .latency_unit(LatencyUnit::Seconds)
-                                .include_headers(true),
-                        )
-                        .on_request(DefaultOnRequest::new().level(Level::INFO)),
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new())
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(LatencyUnit::Seconds)
+                        .include_headers(true),
                 )
-                .layer(
-                    CorsLayer::new()
-                        .allow_methods([
-                            Method::GET,
-                            Method::POST,
-                            Method::PUT,
-                            Method::DELETE,
-                            Method::OPTIONS,
-                        ])
-                        .allow_origin(Any),
-                ),
+                .on_request(DefaultOnRequest::new().level(Level::INFO)),
         )
-        .with_state(state);
+        .layer(
+            CorsLayer::new()
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
+                .allow_origin(Any),
+        );
+    let mut router = handler::router().with_state(state).layer(layer);
+
+    if config.application.health_check {
+        let health = Health::builder().build();
+        router = router
+            .route("/.meta/health", get(axum_health::health))
+            .layer(health);
+    }
+
+    if config.application.prometheus {
+        tracing::info!("Enable Prometheus metrics");
+        let (prometheus_layer, prometheus_metrics) = PrometheusMetricLayer::pair();
+        router = router
+            .route(
+                "/.meta/metrics",
+                get(move || async move { prometheus_metrics.render() }),
+            )
+            .layer(prometheus_layer);
+    }
 
     // 서버 주소 설정 (config 사용)
     tracing::info!("서버가 시작되었습니다: {}", config.server.addr);
 
     // 서버 실행
     let listener = tokio::net::TcpListener::bind(config.server.addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, router).await?;
 
     Ok(())
 }

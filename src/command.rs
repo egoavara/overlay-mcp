@@ -17,6 +17,12 @@ pub struct Command {
     #[arg(short,long = "log-filter", env = "OVERLAY_MCP_LOG_FILTER", default_value_t = String::from("warn"))]
     pub log_filter: String,
 
+    #[arg(long = "prometheus", env = "OVERLAY_MCP_PROMETHEUS", default_value_t = false)]
+    pub prometheus: bool,
+
+    #[arg(long = "health-check", env = "OVERLAY_MCP_HEALTH_CHECK", default_value_t = true)]
+    pub health_check: bool,
+
     #[arg(long = "host", env = "OVERLAY_MCP_SERVER_HOST", default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090))]
     pub addr: SocketAddr,
 
@@ -83,6 +89,8 @@ impl Provider for Command {
         let mut data = json!({
             "application": {
                 "log_filter": self.log_filter,
+                "prometheus": self.prometheus,
+                "health_check": self.health_check,
             },
             "server": {
                 "addr": self.addr,

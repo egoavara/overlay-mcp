@@ -8,7 +8,7 @@ use url::Url;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
-    pub application: Option<ApplicationConfig>,
+    pub application: ApplicationConfig,
     pub server: ServerConfig,
     pub oidc: OpenIDConnectConfig,
     pub storage: Option<Authorization>,
@@ -18,6 +18,8 @@ pub struct Config {
 #[derive(Parser, Debug, Clone, Deserialize, Serialize)]
 pub struct ApplicationConfig {
     pub log_filter: Option<String>,
+    pub prometheus: bool,
+    pub health_check: bool,
 }
 
 #[derive(Parser, Debug, Clone, Deserialize, Serialize)]
