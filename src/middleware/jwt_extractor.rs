@@ -23,12 +23,10 @@ impl JwtMiddlewareState {
             .await?
             .json()
             .await?;
-        let mut validation = Validation::default();
-        validation.set_audience(&[&config.oidc.client_id]);
         Ok(Self(Arc::new(JwtMiddlewareStateInner {
             meta,
             jwks,
-            validation,
+            allowed_audiences: vec![config.oidc.client_id.to_string()],
         })))
     }
 }
@@ -44,7 +42,7 @@ impl Deref for JwtMiddlewareState {
 pub struct JwtMiddlewareStateInner {
     pub(crate) meta: CoreProviderMetadata,
     pub(crate) jwks: JwkSet,
-    validation: Validation,
+    pub(crate) allowed_audiences: Vec<String>,
 }
 pub struct JwtClaim(pub TokenData<serde_json::Value>);
 pub struct OptJwtClaim(pub Option<TokenData<serde_json::Value>>);
@@ -106,10 +104,13 @@ where
                 for key in keys {
                     let dec_key = jsonwebtoken::DecodingKey::from_jwk(key)
                         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Invalid JWK"))?;
+                    let mut validation = Validation::new(header.alg);
+                    validation.set_audience(&state.allowed_audiences);
+                    
                     let token = jsonwebtoken::decode::<serde_json::Value>(
                         token,
                         &dec_key,
-                        &state.validation,
+                        &validation,
                     );
                     match token {
                         Ok(data) => return Ok(OptJwtClaim(Some(data))),

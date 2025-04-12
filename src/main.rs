@@ -5,7 +5,6 @@ mod middleware;
 
 use anyhow::{Context, Result};
 use axum::routing::get;
-use axum::Router;
 use axum_health::Health;
 use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
@@ -17,13 +16,7 @@ use middleware::{trace_layer, JwtMiddlewareState};
 use openidconnect::core::CoreProviderMetadata;
 use openidconnect::IssuerUrl;
 use std::sync::Arc;
-use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::DefaultOnResponse;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, TraceLayer};
-use tower_http::LatencyUnit;
-use tracing::level_filters::LevelFilter;
-use tracing::Level;
 use tracing_subscriber::EnvFilter;
 
 // figment 및 Config 추가
