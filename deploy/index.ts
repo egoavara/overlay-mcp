@@ -144,7 +144,7 @@ const deployment = new apps.v1.Deployment("overlay-mcp", {
                             },
                             {
                                 name: "GITSYNC_PERIOD",
-                                value: "30s",
+                                value: "1s",
                             }
                         ],
                         volumeMounts: [

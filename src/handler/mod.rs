@@ -16,7 +16,7 @@ pub use state::*;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/sse", get(handle_sse::handler))
-        .route("/message", get(handle_message::handler))
+        .route("/message", post(handle_message::handler))
         .route("/oauth2/auth", get(handle_oauth2_auth::handler))
         .route("/oauth2/token", post(handle_oauth2_token::handler))
         .route("/oauth2/client", post(handle_oauth2_client::handler))

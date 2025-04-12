@@ -7,7 +7,7 @@ apt install watchexec-cli
 
 watchexec \
     --exts rs \
-    --poll 5s \
+    --poll 1s \
     -w /data/git-sync/overlay-mcp.git \
     -r --stop-signal SIGKILL \
     -- 'cd /data/git-sync/overlay-mcp.git && cargo run --bin overlay-mcp -- --config /data/overlay-mcp/config.json'
