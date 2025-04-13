@@ -16,7 +16,7 @@ pub use constant_authorizer::*;
 
 use fga_authorizer::FgaAuthorizer;
 use futures_util::StreamExt;
-use http::{request::Parts, uri::PathAndQuery, Response};
+use http::{request::Parts, uri::PathAndQuery, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -162,7 +162,7 @@ impl AuthorizerEngine {
     }
 }
 
-pub struct CheckAuthorizer(pub AuthorizerResponse);
+pub struct CheckAuthorizer(pub AuthorizerResponse, pub StatusCode);
 
 impl<S> FromRequestParts<S> for CheckAuthorizer
 where
@@ -192,7 +192,11 @@ where
             headers: parts.headers.clone(),
             jwt: jwt.map(|jwt| jwt.claims),
         };
+        let code = match &request.jwt {
+            Some(jwt) => StatusCode::FORBIDDEN,
+            None => StatusCode::UNAUTHORIZED,
+        };
 
-        Ok(CheckAuthorizer(authorizer.check(request).await))
+        Ok(CheckAuthorizer(authorizer.check(request).await, code))
     }
 }

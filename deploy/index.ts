@@ -32,21 +32,22 @@ const overlayMcpConfig = new core.v1.ConfigMap("overlay-mcp-config", {
                 "scopes": config.get("oidcScopes")?.split(",")
             },
             "authorizer": {
-                "jwt": {
-                    "allow_all": false,
-                    "group": {
-                        "whitelist": [
-                            "pg-users"
-                        ]
-                    },
-                    "ip": {
-                        "whitelist": "192.168.0.0/16",
-                        "blacklist": [
-                            "127.0.0.1",
-                            "192.168.220.0/24"
-                        ]
-                    }
-                }
+                "openfga": "http://openfga.runtime.svc.cluster.local:8080"
+                // "jwt": {
+                //     "allow_all": false,
+                //     "group": {
+                //         "whitelist": [
+                //             "pg-users"
+                //         ]
+                //     },
+                //     "ip": {
+                //         "whitelist": "192.168.0.0/16",
+                //         "blacklist": [
+                //             "127.0.0.1",
+                //             "192.168.220.0/24"
+                //         ]
+                //     }
+                // }
             }
         }).apply(JSON.stringify)
     }

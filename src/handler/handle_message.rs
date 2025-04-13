@@ -11,14 +11,14 @@ use super::{utils::AnyResult, AppState};
 
 pub(crate) async fn handler(
     State(state): State<AppState>,
-    CheckAuthorizer(authorizer): CheckAuthorizer,
+    CheckAuthorizer(authorizer, code): CheckAuthorizer,
     req: Request<Body>,
 ) -> AnyResult<Response<Body>> {
     match authorizer {
         AuthorizerResponse::Allow(_) => {}
         AuthorizerResponse::Deny(deny) => {
             tracing::info!("{}", deny.reason.unwrap_or("No reason".to_string()));
-            return Ok(Response::builder().status(401).body(Body::empty()).unwrap());
+            return Ok(Response::builder().status(code).body(Body::empty()).unwrap());
         }
     }
 
