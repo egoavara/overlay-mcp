@@ -1,22 +1,24 @@
+mod authorizer;
 mod command;
 mod config;
 mod handler;
 mod middleware;
 
 use anyhow::{Context, Result};
+use authorizer::AuthorizerEngine;
 use axum::routing::get;
+use axum_client_ip::ClientIpSource;
 use axum_health::Health;
 use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::Command;
 use config::Config;
 use handler::AppState;
-use http::Method;
 use middleware::{trace_layer, JwtMiddlewareState};
 use openidconnect::core::CoreProviderMetadata;
 use openidconnect::IssuerUrl;
-use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use std::{net::SocketAddr, sync::Arc};
+use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 
 // figment 및 Config 추가
@@ -79,6 +81,7 @@ async fn main() -> Result<()> {
     // 애플리케이션 상태 설정 (config 사용)
     let state = AppState {
         jwt_middleware: JwtMiddlewareState::load(provider_metadata, &config, &http_client).await?,
+        authorizer: AuthorizerEngine::new(config.authorizer.clone()),
         config: config.clone(),
         reqwest: http_client,
         configfile: Arc::new(configfile),
@@ -108,13 +111,25 @@ async fn main() -> Result<()> {
             )
             .layer(prometheus_layer);
     }
+    router = router.layer(
+        config
+            .application
+            .ip_extract
+            .clone()
+            .unwrap_or(ClientIpSource::ConnectInfo)
+            .into_extension(),
+    );
     router = router.layer(CorsLayer::permissive());
     // 서버 주소 설정 (config 사용)
     tracing::info!("Server started at: {}", config.server.addr);
 
     // 서버 실행
     let listener = tokio::net::TcpListener::bind(config.server.addr).await?;
-    axum::serve(listener, router).await?;
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

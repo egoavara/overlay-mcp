@@ -5,25 +5,24 @@ use axum::{body::Body, extract::{Request, State}, response::{IntoResponse, Respo
 use http::Uri;
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 
-use crate::middleware::OptJwtClaim;
+use crate::{authorizer::{AuthorizerResponse, CheckAuthorizer}, middleware::OptJwtClaim};
 
 use super::{utils::AnyResult, AppState};
 
 pub(crate) async fn handler(
     State(state): State<AppState>,
-    OptJwtClaim(jwt_claim): OptJwtClaim,
+    CheckAuthorizer(authorizer): CheckAuthorizer,
     req: Request<Body>,
 ) -> AnyResult<Response<Body>> {
-    let (mut parts, body) = req.into_parts();
-    match jwt_claim {
-        Some(_) => {
-
-        }
-        None => {
+    match authorizer {
+        AuthorizerResponse::Allow(_) => {}
+        AuthorizerResponse::Deny(deny) => {
+            tracing::info!("{}", deny.reason.unwrap_or("No reason".to_string()));
             return Ok(Response::builder().status(401).body(Body::empty()).unwrap());
         }
     }
 
+    let (mut parts, body) = req.into_parts();
     let mut target_part = Uri::from_str(state.config.server.upstream.as_str()).unwrap().into_parts();
     target_part.path_and_query = parts.uri.path_and_query().cloned();
 

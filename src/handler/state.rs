@@ -7,12 +7,13 @@ use oauth2::{
 use openidconnect::core::CoreProviderMetadata;
 use reqwest::Client;
 
-use crate::{config::{Config}, middleware::JwtMiddlewareState};
+use crate::{authorizer::{Authorizer, AuthorizerEngine}, config::Config, middleware::JwtMiddlewareState};
 
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) reqwest: Client,
     pub(crate) jwt_middleware: JwtMiddlewareState,
+    pub(crate) authorizer: AuthorizerEngine,
     pub(crate) configfile: Arc<Option<PathBuf>>,
     pub(crate) config: Arc<Config>,
 }
@@ -23,7 +24,9 @@ impl AppState {
     ) -> BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointMaybeSet>
     {
         let oauth_client = BasicClient::new(ClientId::new(self.config.oidc.client_id.clone()))
-            .set_client_secret(ClientSecret::new(self.config.oidc.client_secret.expose_secret().to_string()))
+            .set_client_secret(ClientSecret::new(
+                self.config.oidc.client_secret.expose_secret().to_string(),
+            ))
             .set_auth_uri(self.jwt_middleware.meta.authorization_endpoint().clone())
             .set_token_uri_option(self.jwt_middleware.meta.token_endpoint().cloned());
         oauth_client
@@ -45,5 +48,11 @@ impl FromRef<AppState> for JwtMiddlewareState {
 impl FromRef<AppState> for CoreProviderMetadata {
     fn from_ref(input: &AppState) -> Self {
         input.jwt_middleware.meta.clone()
+    }
+}
+
+impl FromRef<AppState> for AuthorizerEngine {
+    fn from_ref(input: &AppState) -> Self {
+        input.authorizer.clone()
     }
 }

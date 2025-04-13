@@ -1,3 +1,4 @@
+use axum_client_ip::ClientIpSource;
 use clap::Parser;
 use redact::Secret;
 use serde::{Deserialize, Serialize};
@@ -6,18 +7,21 @@ use std::default::Default;
 use std::net::{IpAddr, SocketAddr};
 use url::Url;
 
+use crate::authorizer::{Authorizer, AuthorizerComponent};
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
     pub application: ApplicationConfig,
     pub server: ServerConfig,
     pub oidc: OpenIDConnectConfig,
-    pub storage: Option<Authorization>,
+    pub authorizer: Option<Authorizer>,
     pub otel: Option<OpenTelemetryConfig>,
 }
 
 #[derive(Parser, Debug, Clone, Deserialize, Serialize)]
 pub struct ApplicationConfig {
     pub log_filter: Option<String>,
+    pub ip_extract: Option<ClientIpSource>,
     pub prometheus: bool,
     pub health_check: bool,
 }
@@ -32,27 +36,6 @@ pub struct ServerConfig {
     pub addr: SocketAddr,
     pub hostname: Url,
     pub upstream: Url,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub enum Authorization {
-    Static(StaticAuthorization),
-    Fga(FgaAuthorization),
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct StaticAuthorization {
-    #[serde(default)]
-    pub ip_whitelist: Vec<IpAddr>,
-    #[serde(default)]
-    pub ip_blacklist: Vec<IpAddr>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct FgaAuthorization {
-    pub uri: Url,
-    #[serde(default)]
-    pub headers: HashMap<String, String>,
 }
 
 #[derive(Parser, Debug, Clone, Deserialize, Serialize)]
