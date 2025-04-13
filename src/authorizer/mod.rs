@@ -81,7 +81,7 @@ impl AuthorizerEngine {
                     format!("jwtclaim:email={}", email),
                 ));
             }
-            if let Some(group) = jwt.get("group").and_then(|v| v.as_array()) {
+            if let Some(group) = jwt.get("groups").and_then(|v| v.as_array()) {
                 for g in group {
                     if let Some(g) = g.as_str() {
                         context.push((
