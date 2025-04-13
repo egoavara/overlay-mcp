@@ -2,7 +2,7 @@ mod authorizer;
 mod constant_authorizer;
 mod fga_authorizer;
 
-use std::{fmt, sync::Arc};
+use std::{fmt, str::FromStr, sync::Arc};
 
 use anyhow::Context;
 pub use authorizer::*;
@@ -184,16 +184,12 @@ where
         let request: AuthorizerRequest = AuthorizerRequest {
             ip: conn,
             method: parts.method.clone(),
-            path: parts
-                .uri
-                .path_and_query()
-                .cloned()
-                .unwrap_or_else(|| PathAndQuery::from_static("/")),
+            path: PathAndQuery::from_str(parts.uri.path()).unwrap(),
             headers: parts.headers.clone(),
             jwt: jwt.map(|jwt| jwt.claims),
         };
         let code = match &request.jwt {
-            Some(jwt) => StatusCode::FORBIDDEN,
+            Some(_) => StatusCode::FORBIDDEN,
             None => StatusCode::UNAUTHORIZED,
         };
 
