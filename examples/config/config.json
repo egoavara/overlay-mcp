@@ -1,6 +1,7 @@
 {
     "application": {
-        "log_filter": "info"
+        "log_filter": "info",
+        "ip_extract": "ConnectInfo"
     },
     "server": {
         "addr": "0.0.0.0:9090",
@@ -14,17 +15,16 @@
     },
     "authorizer": {
         "jwt": {
+            "required": true,
             "allow_all": false,
             "group":{
-                "whitelist": [
-                    "pg-users"
-                ]
+                "whitelist": "pg-users"
             }
         },
         "ip": {
             "whitelist": "192.168.0.0/16",
             "blacklist": [
-                "127.0.0.1",
+                "127.0.0.1/32",
                 "192.168.220.0/24"
             ]
         }

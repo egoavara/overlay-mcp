@@ -1,16 +1,15 @@
-use std::{net::IpAddr, str::FromStr};
+use std::net::IpAddr;
 
 use futures_util::Stream;
-use http::{uri::PathAndQuery, HeaderMap, HeaderName, HeaderValue, Method};
-use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use http::{uri::PathAndQuery, HeaderMap, Method};
+use serde_with::serde_as;
 fn x(){
     
 }
 
 pub trait AuthorizerComponent {
-    fn whitelist<'a>(&self, request: &'a AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseAllow>;
-    fn blacklist<'a>(&self, request: &'a AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny>;
+    fn whitelist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseAllow>;
+    fn blacklist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny>;
 }
 
 #[serde_as]

@@ -2,12 +2,10 @@ use axum_client_ip::ClientIpSource;
 use clap::Parser;
 use redact::Secret;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::default::Default;
-use std::net::{IpAddr, SocketAddr};
+use std::net::SocketAddr;
 use url::Url;
 
-use crate::authorizer::{Authorizer, AuthorizerComponent};
+use crate::authorizer::Authorizer;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {

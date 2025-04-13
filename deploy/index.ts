@@ -16,6 +16,7 @@ const overlayMcpConfig = new core.v1.ConfigMap("overlay-mcp-config", {
         "config.json": output({
             "application": {
                 "log_filter": config.get("log_filter") || "info",
+                "ip_extract": "RightmostXForwardedFor",
                 "prometheus": true,
                 "health_check": true,
             },
@@ -30,6 +31,23 @@ const overlayMcpConfig = new core.v1.ConfigMap("overlay-mcp-config", {
                 "client_secret": config.getSecret("oidcClientSecret"),
                 "scopes": config.get("oidcScopes")?.split(",")
             },
+            "authorizer": {
+                "jwt": {
+                    "allow_all": false,
+                    "group": {
+                        "whitelist": [
+                            "pg-users"
+                        ]
+                    },
+                    "ip": {
+                        "whitelist": "192.168.0.0/16",
+                        "blacklist": [
+                            "127.0.0.1",
+                            "192.168.220.0/24"
+                        ]
+                    }
+                }
+            }
         }).apply(JSON.stringify)
     }
 })
@@ -164,11 +182,17 @@ const serviceProxy = new core.v1.Service("mcp-db-proxy", {
     metadata: {
         namespace: ns.metadata.name,
         name: "overlay-mcp-proxy",
+        labels: {
+            "istio.io/use-waypoint": "waypoint"
+        }
     },
     spec: {
         type: "LoadBalancer",
         ports: [
             {
+                name: "http",
+                protocol: "TCP",
+                appProtocol: "http",
                 port: 80,
                 targetPort: 9090,
             }

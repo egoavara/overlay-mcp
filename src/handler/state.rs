@@ -7,7 +7,7 @@ use oauth2::{
 use openidconnect::core::CoreProviderMetadata;
 use reqwest::Client;
 
-use crate::{authorizer::{Authorizer, AuthorizerEngine}, config::Config, middleware::JwtMiddlewareState};
+use crate::{authorizer::AuthorizerEngine, config::Config, middleware::JwtMiddlewareState};
 
 #[derive(Clone)]
 pub struct AppState {

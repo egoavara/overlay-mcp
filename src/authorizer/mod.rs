@@ -1,26 +1,24 @@
 mod authorizer;
 mod constant_authorizer;
+mod fga_authorizer;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 pub use authorizer::*;
 use axum::{
     body::Body,
-    extract::{rejection::ExtensionRejection, ConnectInfo, FromRef, FromRequestParts},
+    extract::{FromRef, FromRequestParts},
     response::IntoResponse,
 };
-use axum_client_ip::{ClientIp, Rejection};
+use axum_client_ip::ClientIp;
 pub use constant_authorizer::*;
 
+use fga_authorizer::FgaAuthorizer;
 use futures_util::StreamExt;
-use http::{request::Parts, uri::PathAndQuery, Response, StatusCode};
+use http::{request::Parts, uri::PathAndQuery, Response};
 use serde::{Deserialize, Serialize};
-use url::Url;
 
-use crate::{
-    handler::utils::AnyError,
-    middleware::{JwtMiddlewareState, OptJwtClaim},
-};
+use crate::middleware::{JwtMiddlewareState, OptJwtClaim};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -31,10 +29,6 @@ pub enum Authorizer {
     Constant(ConstantAuthorizer),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct FgaAuthorizer {
-    pub uri: Url,
-}
 
 #[derive(Debug, Clone)]
 pub struct AuthorizerEngine {

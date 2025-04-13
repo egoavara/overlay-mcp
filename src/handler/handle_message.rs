@@ -5,7 +5,7 @@ use axum::{body::Body, extract::{Request, State}, response::{IntoResponse, Respo
 use http::Uri;
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 
-use crate::{authorizer::{AuthorizerResponse, CheckAuthorizer}, middleware::OptJwtClaim};
+use crate::authorizer::{AuthorizerResponse, CheckAuthorizer};
 
 use super::{utils::AnyResult, AppState};
 
