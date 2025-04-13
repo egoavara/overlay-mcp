@@ -11,22 +11,14 @@
     "oidc": {
         "issuer": "https://dex.egoavara.net",
         "client_id": "mcp-db",
-        "scopes": ["openid", "email", "profile", "groups"]
+        "scopes": [
+            "openid",
+            "email",
+            "profile",
+            "groups"
+        ]
     },
     "authorizer": {
-        "jwt": {
-            "required": true,
-            "allow_all": false,
-            "group":{
-                "whitelist": "pg-users"
-            }
-        },
-        "ip": {
-            "whitelist": "192.168.0.0/16",
-            "blacklist": [
-                "127.0.0.1/32",
-                "192.168.220.0/24"
-            ]
-        }
+        "openfga": "http://192.168.220.0:8080"
     }
 }

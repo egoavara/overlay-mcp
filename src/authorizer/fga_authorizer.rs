@@ -8,8 +8,9 @@ use url::Url;
 #[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct FgaAuthorizer {
-    pub uri: Url,
+    pub openfga: Url,
 
     #[serde_as(as = "Map<DisplayFromStr, _>")]
+    #[serde(default)]
     pub headers: Vec<(HeaderName, String)>,
 }
