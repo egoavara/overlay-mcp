@@ -7,12 +7,13 @@ use oauth2::{
 use openidconnect::core::CoreProviderMetadata;
 use reqwest::Client;
 
-use crate::{authorizer::AuthorizerEngine, config::Config, middleware::JwtMiddlewareState};
+use crate::{authorizer::AuthorizerEngine, config::Config, middleware::{ApikeyExtractorState, JwtMiddlewareState}};
 
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) reqwest: Client,
     pub(crate) jwt_middleware: JwtMiddlewareState,
+    pub(crate) api_key_extractor: ApikeyExtractorState,
     pub(crate) authorizer: AuthorizerEngine,
     pub(crate) configfile: Arc<Option<PathBuf>>,
     pub(crate) config: Arc<Config>,
@@ -54,5 +55,11 @@ impl FromRef<AppState> for CoreProviderMetadata {
 impl FromRef<AppState> for AuthorizerEngine {
     fn from_ref(input: &AppState) -> Self {
         input.authorizer.clone()
+    }
+}
+
+impl FromRef<AppState> for ApikeyExtractorState {
+    fn from_ref(input: &AppState) -> Self {
+        input.api_key_extractor.clone()
     }
 }

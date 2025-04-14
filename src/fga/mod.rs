@@ -30,7 +30,7 @@ impl Fga {
         let store_id = Self::upsert_store(&client, &url, &store_name).await?;
         tracing::info!("Store ID: {}", store_id);
         Self::upsert_authorization_model(&client, &url, &store_id).await?;
-        let mut fga = Self {
+        let fga = Self {
             client,
             url,
             headers,

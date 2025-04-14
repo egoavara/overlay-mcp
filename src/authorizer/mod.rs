@@ -2,7 +2,7 @@ mod authorizer;
 mod constant_authorizer;
 mod fga_authorizer;
 
-use std::{fmt, str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc};
 
 use anyhow::Context;
 pub use authorizer::*;
@@ -18,10 +18,12 @@ use fga_authorizer::FgaAuthorizer;
 use futures_util::StreamExt;
 use http::{request::Parts, uri::PathAndQuery, Response, StatusCode};
 use serde::{Deserialize, Serialize};
+use tracing::field;
+use valuable::Valuable;
 
 use crate::{
     fga::Fga,
-    middleware::{JwtMiddlewareState, OptJwtClaim},
+    middleware::{ApikeyExtractor, ApikeyExtractorState, JwtMiddlewareState, OptApikey, OptJwtClaim},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -47,7 +49,7 @@ impl AuthorizerEngine {
             _ => None,
         }) {
             fgaresult = Some(Arc::new(
-                Fga::init(fga.openfga.clone(), "overlay-mcp".to_string())
+                Fga::init((*fga.openfga).clone(), "overlay-mcp".to_string())
                     .await
                     .unwrap(),
             ));
@@ -60,82 +62,19 @@ impl AuthorizerEngine {
 
     pub async fn check(&self, request: AuthorizerRequest) -> AuthorizerResponse {
         match &*self.config {
-            Authorizer::Fga(_) => self.check_fga(request).await,
-            Authorizer::Constant(constant) => self.check_constant(constant, request).await,
-        }
-    }
-
-    async fn check_fga(&self, request: AuthorizerRequest) -> AuthorizerResponse {
-        let engine = self.fga.clone().expect("FGA must be initialized");
-        let mut context = Vec::new();
-        context.push((
-            "user:temp".to_string(),
-            "context".to_string(),
-            format!("ip:{}", request.ip),
-        ));
-        if let Some(jwt) = request.jwt {
-            if let Some(email) = jwt.get("email").and_then(|v| v.as_str()) {
-                context.push((
-                    "user:temp".to_string(),
-                    "context".to_string(),
-                    format!("jwtclaim:email={}", email),
-                ));
-            }
-            if let Some(group) = jwt.get("groups").and_then(|v| v.as_array()) {
-                for g in group {
-                    if let Some(g) = g.as_str() {
-                        context.push((
-                            "user:temp".to_string(),
-                            "context".to_string(),
-                            format!("jwtclaim:group={}", g),
-                        ));
-                    }
+            Authorizer::Fga(fga) => {
+                if let Some(engine) = &self.fga {
+                    fga.check_fga(engine.clone(), request).await
+                } else {
+                    tracing::error!(config = fga.as_value(), "FGA not initialized");
+                    AuthorizerResponse::Deny(AuthorizerResponseDeny {
+                        authorizer: "fga".to_string(),
+                        reason: Some("FGA not initialized".to_string()),
+                    })
                 }
             }
+            Authorizer::Constant(constant) => self.check_constant(constant, request).await,
         }
-        let deny_result = engine
-            .check(
-                (
-                    "user:temp".to_string(),
-                    "deny".to_string(),
-                    format!("api:{}_{}", request.method, request.path),
-                ),
-                context.clone(),
-            )
-            .await
-            .context("auth check failed")
-            .unwrap();
-
-        if deny_result {
-            return AuthorizerResponse::Deny(AuthorizerResponseDeny {
-                authorizer: "fga".to_string(),
-                reason: Some("auth check failed".to_string()),
-            });
-        }
-
-        let allow_result = engine
-            .check(
-                (
-                    "user:temp".to_string(),
-                    "allow".to_string(),
-                    format!("api:{}_{}", request.method, request.path),
-                ),
-                context,
-            )
-            .await
-            .context("auth check failed")
-            .unwrap();
-        if allow_result {
-            return AuthorizerResponse::Allow(AuthorizerResponseAllow {
-                authorizer: "fga".to_string(),
-                reason: None,
-            });
-        }
-
-        AuthorizerResponse::Deny(AuthorizerResponseDeny {
-            authorizer: "fga".to_string(),
-            reason: Some("auth check failed".to_string()),
-        })
     }
 
     async fn check_constant(
@@ -168,12 +107,16 @@ impl<S> FromRequestParts<S> for CheckAuthorizer
 where
     AuthorizerEngine: FromRef<S>,
     JwtMiddlewareState: FromRef<S>,
+    ApikeyExtractorState: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = Response<Body>;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let authorizer = AuthorizerEngine::from_ref(state);
+        let OptApikey(api_key) = OptApikey::from_request_parts(parts, state)
+            .await
+            .map_err(|e| e.into_response())?;
         let ClientIp(conn) = ClientIp::from_request_parts(parts, state)
             .await
             .map_err(|e| e.into_response())?;
@@ -187,6 +130,7 @@ where
             path: PathAndQuery::from_str(parts.uri.path()).unwrap(),
             headers: parts.headers.clone(),
             jwt: jwt.map(|jwt| jwt.claims),
+            apikey: api_key,
         };
         let code = match &request.jwt {
             Some(_) => StatusCode::FORBIDDEN,

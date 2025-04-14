@@ -44,6 +44,7 @@ pub struct JwtMiddlewareStateInner {
     pub(crate) jwks: JwkSet,
     pub(crate) allowed_audiences: Vec<String>,
 }
+
 pub struct JwtClaim(pub TokenData<serde_json::Value>);
 pub struct OptJwtClaim(pub Option<TokenData<serde_json::Value>>);
 

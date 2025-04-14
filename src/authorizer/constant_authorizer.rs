@@ -1,6 +1,4 @@
-use super::authorizer::{
-    AuthorizerComponent, AuthorizerRequest, AuthorizerResponseAllow, AuthorizerResponseDeny,
-};
+use super::authorizer::{AuthorizerRequest, AuthorizerResponseAllow, AuthorizerResponseDeny};
 use futures_util::Stream;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
@@ -9,6 +7,7 @@ use serde_with::{formats::PreferOne, serde_as, OneOrMany};
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ConstantAuthorizer {
     pub ip: Option<IpAuthorizer>,
+    pub apikey: Option<ApikeyAuthorizer>,
     pub jwt: Option<JwtAuthorizer>,
 }
 
@@ -21,6 +20,14 @@ pub struct IpAuthorizer {
     #[serde(default)]
     #[serde_as(as = "OneOrMany<_, PreferOne>")]
     pub blacklist: Vec<IpNet>,
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ApikeyAuthorizer {
+    #[serde(default)]
+    #[serde_as(as = "OneOrMany<_, PreferOne>")]
+    pub whitelist: Vec<String>,
 }
 
 #[serde_as]
@@ -83,14 +90,19 @@ pub(crate) mod default {
     }
 }
 
-impl AuthorizerComponent for ConstantAuthorizer {
-    fn whitelist(
-        &self,
-        request: &AuthorizerRequest,
-    ) -> impl Stream<Item = AuthorizerResponseAllow> {
+impl ConstantAuthorizer {
+    pub(crate) fn whitelist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseAllow> + 'a {
         async_stream::stream! {
             if let Some(ip) = &self.ip {
                 for await allow in ip.whitelist(request) {
+                    yield allow;
+                }
+            }
+            if let Some(apikey) = &self.apikey {
+                for await allow in apikey.whitelist(request) {
                     yield allow;
                 }
             }
@@ -102,7 +114,10 @@ impl AuthorizerComponent for ConstantAuthorizer {
         }
     }
 
-    fn blacklist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny> {
+    pub(crate) fn blacklist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseDeny> + 'a {
         async_stream::stream! {
             if let Some(ip) = &self.ip {
                 for await deny in ip.blacklist(request) {
@@ -118,11 +133,11 @@ impl AuthorizerComponent for ConstantAuthorizer {
     }
 }
 
-impl AuthorizerComponent for IpAuthorizer {
-    fn whitelist(
-        &self,
-        request: &AuthorizerRequest,
-    ) -> impl Stream<Item = AuthorizerResponseAllow> {
+impl IpAuthorizer {
+    fn whitelist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseAllow> + 'a {
         async_stream::stream! {
             for ip in self.whitelist.iter() {
                 if ip.contains(&request.ip) {
@@ -135,7 +150,10 @@ impl AuthorizerComponent for IpAuthorizer {
         }
     }
 
-    fn blacklist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny> {
+    fn blacklist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseDeny> + 'a {
         async_stream::stream! {
             for ip in self.blacklist.iter() {
                 if ip.contains(&request.ip) {
@@ -149,11 +167,11 @@ impl AuthorizerComponent for IpAuthorizer {
     }
 }
 
-impl AuthorizerComponent for JwtAuthorizer {
-    fn whitelist(
-        &self,
-        request: &AuthorizerRequest,
-    ) -> impl Stream<Item = AuthorizerResponseAllow> {
+impl JwtAuthorizer {
+    fn whitelist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseAllow> + 'a {
         async_stream::stream! {
             if self.allow_all && request.jwt.is_some() {
                 yield AuthorizerResponseAllow {
@@ -174,7 +192,10 @@ impl AuthorizerComponent for JwtAuthorizer {
         }
     }
 
-    fn blacklist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny> {
+    fn blacklist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseDeny> + 'a {
         async_stream::stream! {
             if self.required && request.jwt.is_none() {
                 yield AuthorizerResponseDeny {
@@ -196,11 +217,11 @@ impl AuthorizerComponent for JwtAuthorizer {
     }
 }
 
-impl AuthorizerComponent for JwtByField {
-    fn whitelist(
-        &self,
-        request: &AuthorizerRequest,
-    ) -> impl Stream<Item = AuthorizerResponseAllow> {
+impl JwtByField {
+    fn whitelist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseAllow> + 'a {
         async_stream::stream! {
             if let Some(value) = &request.jwt {
                 match self.field.resolve(value) {
@@ -223,7 +244,10 @@ impl AuthorizerComponent for JwtByField {
         }
     }
 
-    fn blacklist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny> {
+    fn blacklist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseDeny> + 'a {
         async_stream::stream! {
             if let Some(value) = &request.jwt {
                 match self.field.resolve(value) {
@@ -247,11 +271,11 @@ impl AuthorizerComponent for JwtByField {
     }
 }
 
-impl AuthorizerComponent for JwtByGroup {
-    fn whitelist(
-        &self,
-        request: &AuthorizerRequest,
-    ) -> impl Stream<Item = AuthorizerResponseAllow> {
+impl JwtByGroup {
+    fn whitelist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseAllow> + 'a {
         async_stream::stream! {
             if let Some(value) = &request.jwt {
                 match self.field.resolve(value) {
@@ -289,7 +313,10 @@ impl AuthorizerComponent for JwtByGroup {
             }
         }
     }
-    fn blacklist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny> {
+    fn blacklist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseDeny> + 'a {
         async_stream::stream! {
             if let Some(value) = &request.jwt {
                 match self.field.resolve(value) {
@@ -323,6 +350,24 @@ impl AuthorizerComponent for JwtByGroup {
                     Err(err) => {
                         tracing::debug!("Error resolving JWT field: {}", err);
                     }
+                }
+            }
+        }
+    }
+}
+
+impl ApikeyAuthorizer {
+    fn whitelist<'a>(
+        &'a self,
+        request: &'a AuthorizerRequest,
+    ) -> impl Stream<Item = AuthorizerResponseAllow> + 'a {
+        async_stream::stream! {
+            if let Some(apikey) = &request.apikey {
+                if self.whitelist.contains(apikey) {
+                    yield AuthorizerResponseAllow {
+                        authorizer: "apikey".to_string(),
+                        reason: Some(format!("API key {} is whitelisted", apikey)),
+                    };
                 }
             }
         }

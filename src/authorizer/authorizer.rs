@@ -7,11 +7,6 @@ fn x(){
     
 }
 
-pub trait AuthorizerComponent {
-    fn whitelist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseAllow>;
-    fn blacklist(&self, request: &AuthorizerRequest) -> impl Stream<Item = AuthorizerResponseDeny>;
-}
-
 #[serde_as]
 #[derive(Debug, Clone)]
 pub struct AuthorizerRequest {
@@ -20,6 +15,7 @@ pub struct AuthorizerRequest {
     pub path: PathAndQuery,
     pub headers: HeaderMap,
     pub jwt: Option<serde_json::Value>,
+    pub apikey: Option<String>,
 }
 
 #[derive(Debug, Clone)]

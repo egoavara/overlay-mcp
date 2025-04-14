@@ -3,11 +3,12 @@ use std::str::FromStr;
 use anyhow::Context;
 use axum::{
     body::Body,
-    extract::{Request, State},
+    extract::{Query, Request, State},
     response::{IntoResponse, Response},
 };
 use http::Uri;
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
+use serde::Deserialize;
 
 use crate::authorizer::{AuthorizerResponse, CheckAuthorizer};
 
@@ -22,7 +23,10 @@ pub(crate) async fn handler(
         AuthorizerResponse::Allow(_) => {}
         AuthorizerResponse::Deny(deny) => {
             tracing::info!("{}", deny.reason.unwrap_or("No reason".to_string()));
-            return Ok(Response::builder().status(code).body(Body::empty()).unwrap());
+            return Ok(Response::builder()
+                .status(code)
+                .body(Body::empty())
+                .unwrap());
         }
     }
 

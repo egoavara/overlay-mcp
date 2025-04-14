@@ -14,16 +14,13 @@ use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::Command;
 use config::Config;
-use fga::Fga;
 use handler::AppState;
-use http::uri::PathAndQuery;
-use middleware::{trace_layer, JwtMiddlewareState};
+use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
 use openidconnect::core::CoreProviderMetadata;
 use openidconnect::IssuerUrl;
-use std::{net::SocketAddr, str::FromStr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
-use url::Url;
 
 // figment 및 Config 추가
 use figment::{
@@ -83,10 +80,11 @@ async fn main() -> Result<()> {
     tracing::info!("OIDC Discovery 완료: URL={}", config.oidc.issuer);
 
     let authorizer = AuthorizerEngine::new(config.authorizer.clone()).await;
-
+    let api_key_extractor = ApikeyExtractorState::load(config.application.apikey.clone()).await?;
     // 애플리케이션 상태 설정 (config 사용)
     let state = AppState {
         jwt_middleware: JwtMiddlewareState::load(provider_metadata, &config, &http_client).await?,
+        api_key_extractor: api_key_extractor,
         authorizer,
         config: config.clone(),
         reqwest: http_client,
