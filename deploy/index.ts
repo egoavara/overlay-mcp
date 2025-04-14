@@ -19,6 +19,16 @@ const overlayMcpConfig = new core.v1.ConfigMap("overlay-mcp-config", {
                 "ip_extract": "RightmostXForwardedFor",
                 "prometheus": true,
                 "health_check": true,
+                "apikey": [
+                    {
+                        "type": "header",
+                        "name": "X-API-KEY"
+                    },
+                    {
+                        "type": "query",
+                        "name": "apikey"
+                    }
+                ]
             },
             "server": {
                 "addr": "0.0.0.0:9090",
