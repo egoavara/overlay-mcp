@@ -23,7 +23,9 @@ use valuable::Valuable;
 
 use crate::{
     fga::Fga,
-    middleware::{ApikeyExtractor, ApikeyExtractorState, JwtMiddlewareState, OptApikey, OptJwtClaim},
+    middleware::{
+        ApikeyExtractor, ApikeyExtractorState, JwtMiddlewareState, OptApikey, OptJwtClaim,
+    },
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -101,8 +103,11 @@ impl AuthorizerEngine {
     }
 }
 
-pub struct CheckAuthorizer(pub AuthorizerResponse, pub StatusCode);
-
+pub struct CheckAuthorizer(pub AuthorizerResponse, pub CheckAuthorizerMetadata);
+pub struct CheckAuthorizerMetadata {
+    pub expected_status_code: StatusCode,
+    pub apikey_from: Option<(String, ApikeyExtractor)>,
+}
 impl<S> FromRequestParts<S> for CheckAuthorizer
 where
     AuthorizerEngine: FromRef<S>,
@@ -130,13 +135,20 @@ where
             path: PathAndQuery::from_str(parts.uri.path()).unwrap(),
             headers: parts.headers.clone(),
             jwt: jwt.map(|jwt| jwt.claims),
-            apikey: api_key,
+            apikey: api_key.clone().map(|(apikey, _)| apikey),
         };
-        let code = match &request.jwt {
-            Some(_) => StatusCode::FORBIDDEN,
-            None => StatusCode::UNAUTHORIZED,
+        let code = if request.jwt.is_some() || request.apikey.is_some() {
+            StatusCode::FORBIDDEN
+        } else {
+            StatusCode::UNAUTHORIZED
         };
 
-        Ok(CheckAuthorizer(authorizer.check(request).await, code))
+        Ok(CheckAuthorizer(
+            authorizer.check(request).await,
+            CheckAuthorizerMetadata {
+                expected_status_code: code,
+                apikey_from: api_key,
+            },
+        ))
     }
 }

@@ -7,13 +7,18 @@ mod middleware;
 
 use anyhow::{Context, Result};
 use authorizer::AuthorizerEngine;
-use axum::routing::get;
+use axum::{
+    response::{sse::Event, Sse},
+    routing::get,
+};
 use axum_client_ip::ClientIpSource;
 use axum_health::Health;
 use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::Command;
 use config::Config;
+use eventsource_client::Client;
+use futures_util::{stream::repeat_with, StreamExt, TryStreamExt};
 use handler::AppState;
 use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
 use openidconnect::core::CoreProviderMetadata;
@@ -30,6 +35,7 @@ use figment::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
+
     // dotenv 파일을 이용한 환경변수 주입
     let _ = dotenvy::dotenv();
     let cli: Command = Command::parse();

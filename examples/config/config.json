@@ -23,7 +23,7 @@
     },
     "server": {
         "addr": "0.0.0.0:9090",
-        "hostname": "https://mcp-db.egoavara.net",
+        "hostname": "http://localhost:9090",
         "upstream": "http://192.168.220.13"
     },
     "oidc": {
@@ -41,6 +41,14 @@
             "whitelist": [
                 "1234567890"
             ]
+        },
+        "jwt":{
+            "fields":{
+                "field": "/email",
+                "whitelist": [
+                    "egoavara@gmail.com"
+                ]
+            }
         }
     }
 }
