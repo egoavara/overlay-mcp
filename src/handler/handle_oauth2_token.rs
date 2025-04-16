@@ -1,8 +1,15 @@
 use std::borrow::Cow;
 
-use axum::{extract::State, Form, Json};
-use oauth2::{basic::BasicTokenResponse, AuthorizationCode, PkceCodeVerifier, RedirectUrl};
+use axum::{
+    extract::{FromRef, State},
+    Form, Json,
+};
+use oauth2::{
+    basic::BasicTokenResponse, AuthorizationCode, PkceCodeVerifier, RedirectUrl,
+};
 use serde::Deserialize;
+
+use crate::middleware::JwtMiddlewareState;
 
 use super::{utils::AnyResult, AppState};
 
@@ -21,14 +28,21 @@ pub(crate) async fn handler(
     Form(query): Form<TokenForm>,
 ) -> AnyResult<Json<BasicTokenResponse>> {
     let redirect_url = RedirectUrl::new(query.redirect_uri)?;
-    let oauth_client = state.get_oauth_client();
+    let jwt_middleware = JwtMiddlewareState::from_ref(&state);
+    let oauth_client = jwt_middleware.oauth_client.clone();
 
     let token_request = oauth_client
         .exchange_code(AuthorizationCode::new(query.code))?
         .set_pkce_verifier(PkceCodeVerifier::new(query.code_verifier.to_owned()))
         .set_redirect_uri(Cow::Borrowed(&redirect_url));
 
-    let token_response = token_request.request_async(&state.reqwest).await?;
+    let token_response = token_request
+        .request_async(&state.reqwest)
+        .await
+        .map_err(|err| {
+            tracing::error!("Failed to request token: {}", err);
+            err
+        })?;
 
     Ok(Json(token_response))
 }

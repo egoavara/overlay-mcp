@@ -1,33 +1,98 @@
-use std::{ops::Deref, sync::Arc};
+use std::{collections::HashSet, ops::Deref, sync::Arc};
 
 use anyhow::Result;
 use axum::extract::{FromRef, FromRequestParts};
 use http::{header, request::Parts, StatusCode};
-use jsonwebtoken::{jwk::JwkSet, TokenData, Validation};
-use openidconnect::core::CoreProviderMetadata;
+use jsonwebtoken::{jwk::JwkSet, Algorithm, DecodingKey, TokenData, Validation};
+use oauth2::{basic::BasicClient, EndpointMaybeSet, EndpointNotSet, EndpointSet};
+use url::Url;
 
-use crate::config::{Config};
+use crate::config::{IdpClientConfig, JwtValidatorConfig};
 
 #[derive(Clone)]
 pub struct JwtMiddlewareState(Arc<JwtMiddlewareStateInner>);
 
 impl JwtMiddlewareState {
-    pub async fn load(
-        meta: CoreProviderMetadata,
-        config: &Config,
-        client: &reqwest::Client,
+    pub fn new(
+        issuer: Url,
+        oauth_client: BasicClient<
+            EndpointSet,
+            EndpointNotSet,
+            EndpointNotSet,
+            EndpointNotSet,
+            EndpointMaybeSet,
+        >,
+        valiator_set: Option<(JwkSet, JwtValidatorConfig)>,
+        client_config: IdpClientConfig,
     ) -> Result<Self> {
-        let jwks = client
-            .get(meta.jwks_uri().url().as_str())
-            .send()
-            .await?
-            .json()
-            .await?;
+        let (jwk, jwt_validator) = match valiator_set {
+            Some((jwk, valid_config)) => (jwk, Some(valid_config)),
+            None => {
+                let empty_jwk = JwkSet { keys: vec![] };
+                (empty_jwk, None)
+            }
+        };
         Ok(Self(Arc::new(JwtMiddlewareStateInner {
-            meta,
-            jwks,
-            allowed_audiences: vec![config.oidc.client_id.to_string()],
+            issuer,
+            oauth_client,
+            jwk,
+            jwt_validator,
+            client_config,
         })))
+    }
+
+    pub(self) fn prepare_validator(&self, alg: Algorithm) -> Validation {
+        let mut validator = Validation::new(alg);
+
+        if let Some(config) = &self.jwt_validator {
+            validator.set_required_spec_claims(&config.required_spec_claims);
+            validator.leeway = config.leeway;
+            validator.reject_tokens_expiring_in_less_than =
+                config.reject_tokens_expiring_in_less_than;
+            validator.validate_exp = config.validate_exp;
+            validator.validate_nbf = config.validate_nbf;
+            match &config.aud {
+                crate::config::JwtAudConfig::NoCheck => {
+                    validator.validate_aud = false;
+                }
+                crate::config::JwtAudConfig::ClientId => {
+                    validator.set_audience(&[&self.client_config.client_id]);
+                }
+                crate::config::JwtAudConfig::Audience(auds) => {
+                    validator.set_audience(auds);
+                }
+            }
+            if let Some(iss) = &config.iss {
+                validator.set_issuer(iss);
+            }
+        } else {
+            validator.required_spec_claims = HashSet::new();
+            
+            validator.validate_exp = false;
+            validator.validate_nbf = false;
+            validator.validate_aud = false;
+
+            validator.insecure_disable_signature_validation();
+        }
+        validator
+    }
+    pub(self) fn prepare_decoding_key(&self, kid: Option<String>) -> Vec<DecodingKey> {
+        if self.jwt_validator.is_none() {
+            return vec![DecodingKey::from_secret(&[])];
+        }
+        if let Some(kid) = kid {
+            match self.jwk.find(&kid) {
+                Some(key) => vec![DecodingKey::from_jwk(key).unwrap()],
+                None => vec![],
+            }
+        } else {
+            self.jwk
+                .keys
+                .iter()
+                .map(DecodingKey::from_jwk)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
+        }
     }
 }
 
@@ -40,9 +105,12 @@ impl Deref for JwtMiddlewareState {
 }
 
 pub struct JwtMiddlewareStateInner {
-    pub(crate) meta: CoreProviderMetadata,
-    pub(crate) jwks: JwkSet,
-    pub(crate) allowed_audiences: Vec<String>,
+    pub(crate) issuer: Url,
+    pub(crate) oauth_client:
+        BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointMaybeSet>,
+    pub(crate) jwk: JwkSet,
+    pub(crate) jwt_validator: Option<JwtValidatorConfig>,
+    pub(crate) client_config: IdpClientConfig,
 }
 
 pub struct JwtClaim(pub TokenData<serde_json::Value>);
@@ -72,7 +140,7 @@ where
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let JwtMiddlewareState(state) = JwtMiddlewareState::from_ref(state);
+        let state = JwtMiddlewareState::from_ref(state);
         let auth_header = match parts.headers.get(header::AUTHORIZATION) {
             Some(header) => header.to_str().map_err(|_| {
                 (
@@ -94,25 +162,11 @@ where
                 let token = val.trim();
                 let header = jsonwebtoken::decode_header(token)
                     .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid token"))?;
-                let keys = match header.kid {
-                    Some(kid) => vec![state
-                        .jwks
-                        .find(&kid)
-                        .ok_or((StatusCode::BAD_REQUEST, "Invalid token"))?],
-                    None => state.jwks.keys.iter().collect(),
-                };
+                let keys = state.prepare_decoding_key(header.kid);
+                let validator = state.prepare_validator(header.alg);
                 let mut failures = Vec::new();
                 for key in keys {
-                    let dec_key = jsonwebtoken::DecodingKey::from_jwk(key)
-                        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Invalid JWK"))?;
-                    let mut validation = Validation::new(header.alg);
-                    validation.set_audience(&state.allowed_audiences);
-                    
-                    let token = jsonwebtoken::decode::<serde_json::Value>(
-                        token,
-                        &dec_key,
-                        &validation,
-                    );
+                    let token = jsonwebtoken::decode::<serde_json::Value>(token, &key, &validator);
                     match token {
                         Ok(data) => return Ok(OptJwtClaim(Some(data))),
                         Err(e) => failures.push(e),

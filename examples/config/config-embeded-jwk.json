@@ -1,0 +1,88 @@
+{
+    "application": {
+        "log_filter": "info",
+        "ip_extract": "ConnectInfo",
+        "apikey": [
+            {
+                "type": "header",
+                "name": "X-API-KEY"
+            },
+            {
+                "type": "header",
+                "name": "X-API-KEY"
+            },
+            {
+                "type": "query",
+                "name": "apikey"
+            },
+            {
+                "type": "query",
+                "name": "api-key"
+            }
+        ]
+    },
+    "server": {
+        "addr": "0.0.0.0:9090",
+        "hostname": "http://localhost:9090",
+        "upstream": "http://192.168.220.13/sse"
+    },
+    "idp": {
+        "type": "oidc",
+        "issuer": "https://dex.egoavara.net",
+        "auth_url": "https://dex.egoavara.net/auth",
+        "token_url": "https://dex.egoavara.net/token",
+        "jwt": {
+            "jwk": {
+                "keys": [
+                    {
+                        "use": "sig",
+                        "kty": "RSA",
+                        "kid": "70b58f4a92aba20efe24768527b7184e9e419bdf",
+                        "alg": "RS256",
+                        "n": "uoBGJEeG7ctQg4A5ACD8qF5JsrNJz68-oYCXOVrzLcFnQ1m0iI6NYjHimcscPwb5q4k83596xtd_-2hsojjjgPvB-b2zkCRKv-th7hLaosXqAwhwCAfUMmqRMai7kmNeCaWVnu4Ta4jvtD6N5LPF9BNc1wse5AkIu_8q8jIn7t19TVScaKH7f10Lz0no3RIyCc7vWjgJqGF4C0mo3RLxxK7GIDcKR2jqDLI_w9zl645tbV0s0lEnF1tuQd0bu3gRZJkc4QYYI00U6AGEiFgI10xMPiOcawO_JjTfVitj2RMtJdbmxd_Nh1vhuhA-DJl9YBGbCAI3geZ7DDKcd8cj8w",
+                        "e": "AQAB"
+                    },
+                    {
+                        "use": "sig",
+                        "kty": "RSA",
+                        "kid": "d5dcff6f1bbeb76e2e9a120e6fe6e7225624117d",
+                        "alg": "RS256",
+                        "n": "pCo67cjxVJlnPO9WthInmN7KACrIexzHn5fqfRSSQ_0geUeZJ9tWFZ7PRDUM9_qMjgVgi_hFPDLvVbGpRzkZ3PFLxejRfknhgQC7fOqVwHHDCvpErw96RS6QNfAwOtSUgBGjFRiInXAIMxQrZ3rX6tocqhH2L9LuhjQAEAsPrXd96-VVLCy-7EVCwahr0Cj-4kCUblQVvXBE2WgnC6xiH2KfmyjmncaYjZv2M3OstpLuKplrftLv8VvnwbN5X-q2C6YokEEF7c3RlFyYggNayJYOWaelHNxImTbLMzBQiNZL6LNnrw-3dIG9TU0dvIQhp1HpUo7trA5oWeFngzgYDw",
+                        "e": "AQAB"
+                    },
+                    {
+                        "use": "sig",
+                        "kty": "RSA",
+                        "kid": "7883e4d881d7eeb8545dfed7fbd096bfb28da39b",
+                        "alg": "RS256",
+                        "n": "o9Mo6Fgix83PHtWRh4fhLjp5-CW8xaU0x9mDdEbjmwh5gCGNANOjwg7FVfhdC9sU52VhJUOy-RfvmBogNBW4VAElyJiC8OdnAFLmlR6J520nJc7eDc54ivYmOwyM-FVrvrmRxMnC-o8h7av3n3nqa5ek-E6gcJlmRxQb3dW7Gu96V7uHkQHahy-FGBCu5lvPTDSRv33fmp71wJ9ZfAv-IlApEZY5LAurV-YbSxPZRxOaauzGyMtuOZjWcCcdWj-a0ksfP4CX6JsxsuUQMkPyRDr5RtBH_NhJEpRHqF_coOAShGcXihlNBZy5qYx-0Gb6rIr9sIvmiR1HwVuIhFLh3w",
+                        "e": "AQAB"
+                    }
+                ]
+            }
+        },
+        "client_id": "mcp-db",
+        "client_secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it directly",
+        "scopes": [
+            "openid",
+            "email",
+            "profile",
+            "groups"
+        ]
+    },
+    "authorizer": {
+        "apikey": {
+            "whitelist": [
+                "1234567890"
+            ]
+        },
+        "jwt": {
+            "fields": {
+                "field": "/email",
+                "whitelist": [
+                    "egoavara@gmail.com"
+                ]
+            }
+        }
+    }
+}

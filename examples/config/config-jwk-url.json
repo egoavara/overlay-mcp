@@ -35,7 +35,7 @@
             "jwk_url": "https://dex.egoavara.net/keys"
         },
         "client_id": "mcp-db",
-        "client_secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it here",
+        "client_secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it directly",
         "scopes": [
             "openid",
             "email",
@@ -49,8 +49,8 @@
                 "1234567890"
             ]
         },
-        "jwt":{
-            "fields":{
+        "jwt": {
+            "fields": {
                 "field": "/email",
                 "whitelist": [
                     "egoavara@gmail.com"

@@ -1,30 +1,24 @@
-use std::{collections::HashMap, convert::Infallible, str::FromStr, time::Duration};
+use std::{str::FromStr, time::Duration};
 
-use anyhow::Context;
 use axum::{
     body::Body,
     debug_handler,
-    extract::{Query, Request, State},
+    extract::{Request, State},
     response::{
-        self,
-        sse::{Event, KeepAlive},
-        IntoResponse, Response, Sse,
+        sse::Event, Response, Sse,
     },
 };
-use axum_extra::either::Either;
 use eventsource_client::{Client, SSE};
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use http::{header, HeaderName, StatusCode, Uri};
-use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
-use serde::Deserialize;
+use http::{Method, StatusCode};
 use url::Url;
 
 use crate::{
     authorizer::{AuthorizerResponse, CheckAuthorizer},
-    middleware::ApikeyExtractor,
+    utils::{HttpComponent, PassthroughState},
 };
 
-use super::{utils::AnyResult, AppState};
+use super::AppState;
 
 #[debug_handler]
 pub(crate) async fn handler(
@@ -45,26 +39,39 @@ pub(crate) async fn handler(
 
     let hostname = state.config.server.hostname.clone();
 
-    let (mut parts, _) = req.into_parts();
-    let mut target_uri = Url::from_str(state.config.server.upstream.as_str()).unwrap();
-    target_uri.set_path(parts.uri.path());
-    parts.uri = Uri::from_str(&target_uri.to_string()).unwrap();
-
-    if let Some((_, extractor)) = &meta.apikey_from {
-        parts = extractor.destruct(parts);
-    } else {
-        target_uri.set_query(parts.uri.query());
+    let (src, _) = req.into_parts();
+    let mut dst_builder = PassthroughState::new(src);
+    for passthrough in &state.config.application.passthrough {
+        dst_builder = dst_builder.passing(passthrough).map_err(|e| {
+            tracing::error!("failed to passthrough: {}", e);
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap()
+        })?;
     }
+    let dst = dst_builder
+        .empty_end(
+            Method::GET,
+            Url::from_str(state.config.server.upstream.as_str()).unwrap(),
+        )
+        .map_err(|e| {
+            tracing::error!("failed to passthrough: {}", e);
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap()
+        })?;
 
     let mut client =
-        eventsource_client::ClientBuilder::for_url(&parts.uri.to_string()).map_err(|e| {
+        eventsource_client::ClientBuilder::for_url(&dst.uri().to_string()).map_err(|e| {
             tracing::error!("failed to create eventsource client: {}", e);
             Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
                 .body(Body::empty())
                 .unwrap()
         })?;
-    if let Some(last_event_id) = parts.headers.get("last-event-id") {
+    if let Some(last_event_id) = dst.headers().get("last-event-id") {
         client = client.last_event_id(
             last_event_id
                 .to_str()
@@ -78,7 +85,8 @@ pub(crate) async fn handler(
                 .to_string(),
         );
     }
-    for (name, value) in parts.headers.iter() {
+
+    for (name, value) in dst.headers().iter() {
         if name.as_str() == "last-event-id" {
             continue;
         }
@@ -130,28 +138,7 @@ pub(crate) async fn handler(
                 .body(Body::empty())
                 .unwrap()
         })?;
-    let host = parts
-        .headers
-        .get(header::HOST)
-        .map(|x| x.to_str())
-        .transpose()
-        .map_err(|err| {
-            tracing::error!("failed to get host: {}", err);
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::empty())
-                .unwrap()
-        })?
-        .ok_or_else(|| {
-            tracing::error!("failed to get host, not exists");
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::empty())
-                .unwrap()
-        })?
-        .to_string();
 
-    tracing::info!(host = ?parts.headers.get(header::HOST));
     let left_stream = downstream.map(move |event| match event {
         Result::Ok(SSE::Event(event)) => {
             tracing::info!("event: {:?}", event);
@@ -163,11 +150,11 @@ pub(crate) async fn handler(
                 response = response.retry(Duration::from_millis(retry));
             }
             if event.event_type == "endpoint" {
-                let mut url = Url::parse(&event.data).unwrap();
+                let url = Url::parse(&event.data).unwrap();
                 let mut endpoint = hostname.clone();
                 endpoint.set_path(url.path());
                 endpoint.set_query(url.query());
-                if let Some((apikey, ApikeyExtractor::Query { name })) = &meta.apikey_from {
+                if let Some((apikey, HttpComponent::Query { name })) = &meta.apikey_from {
                     endpoint.query_pairs_mut().append_pair(name, apikey);
                 }
                 return Ok(response.event(event.event_type).data(endpoint));

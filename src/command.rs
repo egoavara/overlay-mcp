@@ -23,7 +23,7 @@ pub struct Command {
     #[arg(long = "health-check", env = "OVERLAY_MCP_HEALTH_CHECK", default_value_t = true)]
     pub health_check: bool,
 
-    #[arg(long = "host", env = "OVERLAY_MCP_SERVER_HOST", default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090))]
+    #[arg(long = "addr", env = "OVERLAY_MCP_SERVER_ADDR", default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090))]
     pub addr: SocketAddr,
 
     #[arg(long = "hostname", env = "OVERLAY_MCP_SERVER_HOSTNAME")]
@@ -97,7 +97,7 @@ impl Provider for Command {
                 "hostname": self.hostname,
                 "upstream": self.upstream,
             },
-            "oidc": {
+            "idp": {
                 "issuer": self.issuer,
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,

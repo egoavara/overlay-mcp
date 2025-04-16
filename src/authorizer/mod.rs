@@ -4,7 +4,6 @@ mod fga_authorizer;
 
 use std::{str::FromStr, sync::Arc};
 
-use anyhow::Context;
 pub use authorizer::*;
 use axum::{
     body::Body,
@@ -18,14 +17,12 @@ use fga_authorizer::FgaAuthorizer;
 use futures_util::StreamExt;
 use http::{request::Parts, uri::PathAndQuery, Response, StatusCode};
 use serde::{Deserialize, Serialize};
-use tracing::field;
 use valuable::Valuable;
 
 use crate::{
     fga::Fga,
-    middleware::{
-        ApikeyExtractor, ApikeyExtractorState, JwtMiddlewareState, OptApikey, OptJwtClaim,
-    },
+    middleware::{ApikeyExtractorState, JwtMiddlewareState, OptApikey, OptJwtClaim},
+    utils::HttpComponent,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -51,9 +48,13 @@ impl AuthorizerEngine {
             _ => None,
         }) {
             fgaresult = Some(Arc::new(
-                Fga::init((*fga.openfga).clone(), "overlay-mcp".to_string())
-                    .await
-                    .unwrap(),
+                Fga::init(
+                    (*fga.openfga).clone(),
+                    "overlay-mcp".to_string(),
+                    &fga.headers,
+                )
+                .await
+                .unwrap(),
             ));
         }
         Self {
@@ -106,7 +107,7 @@ impl AuthorizerEngine {
 pub struct CheckAuthorizer(pub AuthorizerResponse, pub CheckAuthorizerMetadata);
 pub struct CheckAuthorizerMetadata {
     pub expected_status_code: StatusCode,
-    pub apikey_from: Option<(String, ApikeyExtractor)>,
+    pub apikey_from: Option<(String, HttpComponent)>,
 }
 impl<S> FromRequestParts<S> for CheckAuthorizer
 where

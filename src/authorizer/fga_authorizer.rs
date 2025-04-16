@@ -1,15 +1,14 @@
 use crate::fga::Fga;
 use anyhow::Context;
-use http::{HeaderMap, HeaderName};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DeserializeAs, DisplayFromStr, Map};
+use serde_with::{serde_as, DeserializeAs, DisplayFromStr};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
 use url::Url;
-use valuable::{Mappable, NamedField, NamedValues, Valuable, Value, Visit};
+use valuable::{Valuable, Value, Visit};
 
 use super::{
     AuthorizerRequest, AuthorizerResponse, AuthorizerResponseAllow, AuthorizerResponseDeny,

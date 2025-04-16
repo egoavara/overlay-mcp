@@ -1,5 +1,11 @@
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{
+    extract::{FromRef, State},
+    response::IntoResponse,
+    Json,
+};
 use serde::Serialize;
+
+use crate::middleware::JwtMiddlewareState;
 
 use super::AppState;
 
@@ -15,10 +21,9 @@ pub struct WellKnownResponse {
     pub registration_endpoint: String,
 }
 
-pub(crate) async fn handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let issuer = state.config.oidc.issuer.clone();
+pub(crate) async fn handler(State(state): State<AppState>) -> impl IntoResponse {
+    let jwt_middleware = JwtMiddlewareState::from_ref(&state);
+    let issuer = jwt_middleware.issuer.clone();
     let mut hostname = state.config.server.hostname.clone();
     hostname.set_path("/");
     hostname.set_query(None);
@@ -27,9 +32,9 @@ pub(crate) async fn handler(
     let authorization_endpoint = hostname.join("/oauth2/auth").unwrap();
     let token_endpoint = hostname.join("/oauth2/token").unwrap();
     let registration_endpoint = hostname.join("/oauth2/client").unwrap();
-    
+
     Json(WellKnownResponse {
-        issuer: issuer.clone(),
+        issuer: issuer.to_string(),
         authorization_endpoint: authorization_endpoint.to_string(),
         response_types_supported: vec!["code".to_string()],
         code_challenge_methods_supported: vec!["S256".to_string()],

@@ -23,12 +23,14 @@
     },
     "server": {
         "addr": "0.0.0.0:9090",
-        "hostname": "https://mcp-db.egoavara.net",
-        "upstream": "http://192.168.220.13"
+        "hostname": "http://localhost:9090",
+        "upstream": "http://192.168.220.13/sse"
     },
-    "oidc": {
+    "idp": {
+        "type": "oidc-discovery",
         "issuer": "https://dex.egoavara.net",
         "client_id": "mcp-db",
+        "client_secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it directly",
         "scopes": [
             "openid",
             "email",
@@ -37,6 +39,18 @@
         ]
     },
     "authorizer": {
-        "openfga": "http://192.168.220.0:8080"
+        "apikey": {
+            "whitelist": [
+                "1234567890"
+            ]
+        },
+        "jwt":{
+            "fields":{
+                "field": "/email",
+                "whitelist": [
+                    "egoavara@gmail.com"
+                ]
+            }
+        }
     }
 }

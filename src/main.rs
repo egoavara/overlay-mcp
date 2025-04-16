@@ -1,28 +1,24 @@
 mod authorizer;
 mod command;
 mod config;
+mod config_loader;
 mod fga;
 mod handler;
 mod middleware;
+mod utils;
 
 use anyhow::{Context, Result};
 use authorizer::AuthorizerEngine;
-use axum::{
-    response::{sse::Event, Sse},
-    routing::get,
-};
+use axum::routing::get;
 use axum_client_ip::ClientIpSource;
 use axum_health::Health;
 use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::Command;
 use config::Config;
-use eventsource_client::Client;
-use futures_util::{stream::repeat_with, StreamExt, TryStreamExt};
+use futures_util::TryStreamExt;
 use handler::AppState;
 use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
-use openidconnect::core::CoreProviderMetadata;
-use openidconnect::IssuerUrl;
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
@@ -35,18 +31,18 @@ use figment::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
     // dotenv 파일을 이용한 환경변수 주입
     let _ = dotenvy::dotenv();
     let cli: Command = Command::parse();
     let configfile = cli.configfile.clone();
 
     // 설정 로드 (Figment 사용)
-    let mut config_loader: Figment = Figment::new().merge(cli);
+    let mut config_loader: Figment = Figment::new();
     if let Some(configfile) = &configfile {
         config_loader = config_loader.merge(FigmentJson::file(configfile));
     }
     let config: Config = config_loader
+        .merge(cli)
         .extract()
         .context("Failed to load configuration")?;
 
@@ -75,22 +71,18 @@ async fn main() -> Result<()> {
         .build()
         .expect("Client should build");
 
-    // OIDC Discovery 수행 (config 사용)
-    let issuer_url = IssuerUrl::new(config.oidc.issuer.clone())?;
-    let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, &http_client).await?;
-    // Ensure token endpoint exists before creating MCPAuthClient
-    if provider_metadata.token_endpoint().is_none() {
-        return Err(anyhow::anyhow!("Token endpoint not found in OIDC metadata"));
-    }
-
-    tracing::info!("OIDC Discovery 완료: URL={}", config.oidc.issuer);
+    let (issuer, oauth_client, valiator_set, client_config) = config.idp.load(&http_client).await?;
 
     let authorizer = AuthorizerEngine::new(config.authorizer.clone()).await;
     let api_key_extractor = ApikeyExtractorState::load(config.application.apikey.clone()).await?;
     // 애플리케이션 상태 설정 (config 사용)
     let state = AppState {
-        jwt_middleware: JwtMiddlewareState::load(provider_metadata, &config, &http_client).await?,
-        api_key_extractor: api_key_extractor,
+        jwt_middleware: JwtMiddlewareState::new(issuer, oauth_client, valiator_set, client_config)
+            .map_err(|err| {
+                tracing::error!("Failed to create JwtMiddlewareState: {}", err);
+                err
+            })?,
+        api_key_extractor,
         authorizer,
         config: config.clone(),
         reqwest: http_client,

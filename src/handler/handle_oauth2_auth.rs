@@ -1,11 +1,11 @@
-
 use axum::{
-    extract::{Query, State},
+    extract::{FromRef, Query, State},
     response::{IntoResponse, Redirect},
 };
 use oauth2::{CsrfToken, PkceCodeChallenge, RedirectUrl, Scope};
 use serde::Deserialize;
 
+use crate::middleware::JwtMiddlewareState;
 
 use super::{utils::AnyResult, AppState};
 
@@ -29,16 +29,17 @@ pub(crate) async fn handler(
             "code_challenge_method": query.code_challenge_method,
         }
     ))?;
-
-    let oauth_client = state
-        .get_oauth_client()
+    let jwt_middleware = JwtMiddlewareState::from_ref(&state);
+    let oauth_client = jwt_middleware
+        .oauth_client
+        .clone()
         .set_redirect_uri(RedirectUrl::new(query.redirect_uri)?);
 
     let mut auth_request = oauth_client
         .authorize_url(CsrfToken::new_random)
         .set_pkce_challenge(code_challenge);
 
-    for scope in &state.config.oidc.scopes {
+    for scope in &jwt_middleware.client_config.scopes {
         auth_request = auth_request.add_scope(Scope::new(scope.clone()));
     }
 

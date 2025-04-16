@@ -1,8 +1,9 @@
 mod schema;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use anyhow::{Context, Ok, Result};
+use http::{HeaderMap, HeaderName, HeaderValue};
 use jsonpath_rust::JsonPath;
 use serde::Deserialize;
 use serde_json::json;
@@ -12,7 +13,6 @@ use url::Url;
 pub struct Fga {
     client: reqwest::Client,
     url: Url,
-    headers: HashMap<String, String>,
     store_id: String,
     authorization_model_id: Option<String>,
 }
@@ -24,16 +24,25 @@ struct CheckResponse {
 }
 
 impl Fga {
-    pub async fn init(url: Url, store_name: String) -> Result<Self> {
-        let headers = HashMap::new();
-        let client = reqwest::Client::new();
+    pub async fn init(
+        url: Url,
+        store_name: String,
+        headers: &HashMap<String, String>,
+    ) -> Result<Self> {
+        let mut default_headers = HeaderMap::new();
+        for (key, value) in headers {
+            default_headers.insert(HeaderName::from_str(key)?, HeaderValue::from_str(value)?);
+        }
+
+        let client = reqwest::Client::builder()
+            .default_headers(default_headers)
+            .build()?;
         let store_id = Self::upsert_store(&client, &url, &store_name).await?;
         tracing::info!("Store ID: {}", store_id);
         Self::upsert_authorization_model(&client, &url, &store_id).await?;
         let fga = Self {
             client,
             url,
-            headers,
             store_id,
             authorization_model_id: None,
         };
