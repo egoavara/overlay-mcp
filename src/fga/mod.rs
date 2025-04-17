@@ -14,12 +14,16 @@ pub struct Fga {
     client: reqwest::Client,
     url: Url,
     store_id: String,
+    
+    #[allow(dead_code)]
     authorization_model_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct CheckResponse {
     allowed: bool,
+    
+    #[allow(dead_code)]
     resolution: String,
 }
 
@@ -64,7 +68,7 @@ impl Fga {
         let found = resp.query("$.stores[*].id")?;
         match found.as_slice() {
             [x] => Ok(x.as_str().expect("store_id must be string").to_string()),
-            [x, _, ..] => {
+            [_, _, ..] => {
                 tracing::error!("Multiple stores found, please check your FGA configuration");
                 Err(anyhow::anyhow!(
                     "Multiple stores found, please check your FGA configuration"

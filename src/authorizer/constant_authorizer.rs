@@ -1,4 +1,4 @@
-use super::authorizer::{AuthorizerRequest, AuthorizerResponseAllow, AuthorizerResponseDeny};
+use super::{AuthorizerRequest, AuthorizerResponseAllow, AuthorizerResponseDeny};
 use futures_util::Stream;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};

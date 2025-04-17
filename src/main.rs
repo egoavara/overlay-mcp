@@ -16,7 +16,6 @@ use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::Command;
 use config::Config;
-use futures_util::TryStreamExt;
 use handler::AppState;
 use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
 use std::{net::SocketAddr, sync::Arc};

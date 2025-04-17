@@ -107,7 +107,7 @@ pub(crate) async fn handler(
     }
     let mut downstream = client.build().stream();
 
-    let conn = downstream
+    downstream
         .by_ref()
         .map(|event| match event {
             Result::Ok(SSE::Connected(event)) => {
@@ -133,6 +133,7 @@ pub(crate) async fn handler(
                 .unwrap()
         })?
         .ok_or_else(|| {
+            tracing::error!("no event");
             Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
                 .body(Body::empty())

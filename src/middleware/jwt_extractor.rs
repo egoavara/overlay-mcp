@@ -113,6 +113,7 @@ pub struct JwtMiddlewareStateInner {
     pub(crate) client_config: IdpClientConfig,
 }
 
+#[allow(dead_code)]
 pub struct JwtClaim(pub TokenData<serde_json::Value>);
 pub struct OptJwtClaim(pub Option<TokenData<serde_json::Value>>);
 

@@ -1,10 +1,10 @@
-mod authorizer;
+mod core;
 mod constant_authorizer;
 mod fga_authorizer;
 
 use std::{str::FromStr, sync::Arc};
 
-pub use authorizer::*;
+pub use core::*;
 use axum::{
     body::Body,
     extract::{FromRef, FromRequestParts},
@@ -87,12 +87,15 @@ impl AuthorizerEngine {
     ) -> AuthorizerResponse {
         let blacklist = config.blacklist(&request);
         futures_util::pin_mut!(blacklist);
+        #[allow(clippy::never_loop)]
         while let Some(x) = blacklist.next().await {
             return AuthorizerResponse::Deny(x);
         }
 
         let whitelist = config.whitelist(&request);
         futures_util::pin_mut!(whitelist);
+        
+        #[allow(clippy::never_loop)]
         while let Some(x) = whitelist.next().await {
             return AuthorizerResponse::Allow(x);
         }

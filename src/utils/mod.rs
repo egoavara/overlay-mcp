@@ -83,7 +83,7 @@ impl PassthroughState {
                 PassthroughValue::String(value) => {
                     self.dst_query.insert(name.clone(), value);
                 }
-                PassthroughValue::Bytes(value) => {
+                PassthroughValue::Bytes(_) => {
                     tracing::warn!("Bytes value is not supported for query");
                 }
                 PassthroughValue::None => {}
@@ -92,8 +92,10 @@ impl PassthroughState {
                 let header_name = HeaderName::from_str(name)?;
                 match value {
                     PassthroughValue::String(value) => match HeaderValue::from_str(&value) {
-                        Ok(value) => {}
-                        Err(e) => {
+                        Ok(value) => {
+                            self.dst_headers.push((header_name, value));
+                        }
+                        Err(_) => {
                             tracing::warn!(input = ?value,  "Failed to parse header value");
                         }
                     },
@@ -101,7 +103,7 @@ impl PassthroughState {
                         Ok(value) => {
                             self.dst_headers.push((header_name, value));
                         }
-                        Err(e) => {
+                        Err(_) => {
                             tracing::warn!(input = ?value,  "Failed to parse header value");
                         }
                     },
