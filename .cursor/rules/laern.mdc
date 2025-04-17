@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Agent 학습 강령
+
+만약 작업 도중 문제를 해결했을 경우 차후 동일한 일이 발생하지 않도록 배운 내용을 `.cursor/rules` 내부의 `learn*.mdc` 파일에 업데이트 한다.
+
+## 파일 구조
+
+### `learn-githubaction.mdc`
+
+`.github/**/*` 패턴의 파일을 수정하던 도중 발견한 문제와 해결방법을 정리하는 파일
+깃허브 액션과 관련된 내용이 정리된다.
+
+### `learn-rust.mdc`
+
+`*.rs` 패턴의 파일을 수정하던 도중 발견한 문제와 해결방법을 정리하는 파일
+rust 프로그램과 관련된 문제가 정리된다.
+
