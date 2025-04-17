@@ -5,8 +5,8 @@ on:
     types: [created]
 
 jobs:
-  build-and-push-docker:
-    name: Build and Push Docker Image
+  package-docker:
+    name: Package Docker Images (linux/amd64, linux/arm64)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,12 +46,33 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  build-and-upload-binary:
-    name: Build and Upload Windows Binary
-    runs-on: windows-latest
+  build-binaries:
+    name: Build Binary (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset_name_suffix: windows-amd64.exe
+            asset_content_type: application/vnd.microsoft.portable-executable
+            rustflags: ""
+            needs_linker_install: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            asset_name_suffix: linux-amd64
+            asset_content_type: application/octet-stream
+            needs_linker_install: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            asset_name_suffix: linux-arm64
+            asset_content_type: application/octet-stream
+            needs_linker_install: true
+            linker: aarch64-linux-gnu-gcc
+            linker_install_cmd: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,24 +81,35 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: "1.86.0"
-          target: x86_64-pc-windows-msvc
-          rustflags: ""
+          target: ${{ matrix.target }}
+          rustflags: ${{ matrix.rustflags }}
 
-      - name: Build for Windows (MSVC)
-        run: cargo build --release --target x86_64-pc-windows-msvc
+      - name: Install cross-linker if needed
+        if: matrix.needs_linker_install
+        run: ${{ matrix.linker_install_cmd }}
+        shell: bash
+
+      - name: Build (non-arm64)
+        if: matrix.target != 'aarch64-unknown-linux-musl'
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (arm64 with linker)
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: cargo build --release --target ${{ matrix.target }}
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: ${{ matrix.linker }}
 
       - name: Determine Asset Name
         id: asset_name
         run: |
-          $RELEASE_TAG = "${{ github.event.release.tag_name }}"
-          echo "ASSET_NAME=overlay-mcp-$RELEASE_TAG-windows-amd64.exe" >> $env:GITHUB_ENV
+          echo "ASSET_NAME=overlay-mcp-${{ github.event.release.tag_name }}-${{ matrix.asset_name_suffix }}" >> $GITHUB_ENV
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./target/x86_64-pc-windows-msvc/release/overlay-mcp.exe
+          asset_path: ./target/${{ matrix.target }}/release/overlay-mcp${{ endsWith(matrix.asset_name_suffix, '.exe') && '.exe' || '' }}
           asset_name: ${{ env.ASSET_NAME }}
-          asset_content_type: application/vnd.microsoft.portable-executable 
+          asset_content_type: ${{ matrix.asset_content_type }} 
