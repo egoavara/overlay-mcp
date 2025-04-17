@@ -150,7 +150,16 @@ pub(crate) async fn handler(
                 response = response.retry(Duration::from_millis(retry));
             }
             if event.event_type == "endpoint" {
-                let url = Url::parse(&event.data).unwrap();
+                let url = match Url::parse(&event.data) {
+                    Ok(url) => url,
+                    Err(url::ParseError::RelativeUrlWithoutBase) => {
+                        return Ok(response.event(event.event_type).data(event.data));
+                    }
+                    Err(_) => {
+                        tracing::error!("failed to parse url: {}", event.data);
+                        return Ok(response.event(event.event_type).data(event.data));
+                    }
+                };
                 let mut endpoint = hostname.clone();
                 endpoint.set_path(url.path());
                 endpoint.set_query(url.query());
