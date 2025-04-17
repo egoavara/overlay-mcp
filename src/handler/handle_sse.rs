@@ -10,7 +10,7 @@ use axum::{
 };
 use eventsource_client::{Client, SSE};
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use http::{Method, StatusCode};
+use http::{Method, StatusCode, Uri};
 use url::Url;
 
 use crate::{
@@ -153,7 +153,17 @@ pub(crate) async fn handler(
                 let url = match Url::parse(&event.data) {
                     Ok(url) => url,
                     Err(url::ParseError::RelativeUrlWithoutBase) => {
-                        return Ok(response.event(event.event_type).data(event.data));
+                        match hostname.join(&event.data) {
+                            Ok(url) => url,
+                            Err(err) => {
+                                tracing::error!(
+                                    data = event.data,
+                                    error = ?err,
+                                    "failed to join url"
+                                );
+                                return Ok(response.event(event.event_type).data(event.data));
+                            }
+                        }
                     }
                     Err(_) => {
                         tracing::error!("failed to parse url: {}", event.data);
@@ -166,7 +176,8 @@ pub(crate) async fn handler(
                 if let Some((apikey, HttpComponent::Query { name })) = &meta.apikey_from {
                     endpoint.query_pairs_mut().append_pair(name, apikey);
                 }
-                return Ok(response.event(event.event_type).data(endpoint));
+                let uri = Uri::from_str(endpoint.as_str()).unwrap();
+                return Ok(response.event(event.event_type).data(uri.path_and_query().unwrap().to_string()));
             }
             Ok(response.event(event.event_type).data(event.data))
         }

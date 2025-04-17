@@ -1,13 +1,79 @@
-FROM rust:1.86.0-bookworm AS builder
+# Cross-compile the app for musl to create a statically-linked binary for alpine.
+FROM --platform=$BUILDPLATFORM rust:1.86.0-bookworm AS builder
+
+ARG TARGETPLATFORM
+
+# Determine Rust target based on TARGETPLATFORM
+RUN case "$TARGETPLATFORM" in \
+      "linux/amd64") echo x86_64-unknown-linux-musl > /rust_target.txt ;; \
+      "linux/arm64") echo aarch64-unknown-linux-musl > /rust_target.txt ;; \
+      "linux/arm/v7") echo armv7-unknown-linux-musleabihf > /rust_target.txt ;; \
+      "linux/arm/v6") echo arm-unknown-linux-musleabihf > /rust_target.txt ;; \
+      *) exit 1 ;; \
+    esac
+
+# Read the target from the file
+RUN export RUST_TARGET=$(cat /rust_target.txt) && \
+    echo "Selected Rust target: $RUST_TARGET" && \
+    rustup target add $RUST_TARGET
+
+# Install necessary build tools including cross-compilers and musl tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Base tools
+    binutils \
+    # Musl support
+    musl-tools \
+    musl-dev \
+    # Cross-compilers for required targets (add more as needed)
+    gcc-aarch64-linux-gnu \
+    gcc-arm-linux-gnueabihf \
+    gcc-x86-64-linux-gnu \
+    # Cross-compilation C library development files
+    libc6-dev-arm64-cross \
+    libc6-dev-armhf-cross \
+    libc6-dev-amd64-cross \
+    # Cleanup
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY . .
+COPY .cargo ./.cargo
 
-RUN cargo build --release
+COPY Cargo.toml Cargo.lock ./
 
+COPY src ./src
+
+# Set linker environment variables based on the target
+RUN export RUST_TARGET=$(cat /rust_target.txt) && \
+    case "$RUST_TARGET" in \
+      "aarch64-unknown-linux-musl") export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc ;; \
+      "armv7-unknown-linux-musleabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+      "arm-unknown-linux-musleabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+      # Use the x86_64 cross-compiler for the x86_64 musl target
+      "x86_64-unknown-linux-musl") export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-gnu-gcc ;; \
+    esac && \
+    echo "Building for target: $RUST_TARGET" && \
+    # Perform the build
+    cargo build --release --target $RUST_TARGET
+
+# Move the binary to a location free of the target since that is not available in the next stage.
+RUN cp target/$(cat /rust_target.txt)/release/overlay-mcp .
+
+# Final minimal image using debian (could switch to alpine if binary is truly static)
 FROM debian:bookworm
 
-COPY --from=builder /app/target/release/overlay-mcp /usr/local/bin/overlay-mcp
+# Add /usr/local/bin to PATH
+ENV PATH="/usr/local/bin:${PATH}"
 
-ENTRYPOINT ["/usr/local/bin/overlay-mcp"]
+# Install tini for process management and ca-certificates for HTTPS
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tini \
+    ca-certificates \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy the built binary from the builder stage
+COPY --from=builder /app/overlay-mcp /usr/local/bin/overlay-mcp
+
+# Set the entrypoint to run overlay-mcp via tini
+ENTRYPOINT ["/usr/bin/tini", "--", "overlay-mcp"]
+# CMD is removed as the command is now part of the entrypoint
