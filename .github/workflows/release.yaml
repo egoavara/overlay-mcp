@@ -83,18 +83,9 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: "1.86.0"
+          cache-shared-key: "rust-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}"
           target: ${{ matrix.target }}
           rustflags: ${{ matrix.rustflags }}
-
-      - name: Cache Cargo registry and target directory
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ matrix.target }}-
 
       - name: Install cross-linker if needed
         if: matrix.needs_linker_install
