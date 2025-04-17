@@ -37,24 +37,46 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY .cargo ./.cargo
+# --- 의존성 캐싱을 위한 변경 시작 ---
 
+# 1. 의존성 파일 먼저 복사
+COPY .cargo ./.cargo
 COPY Cargo.toml Cargo.lock ./
 
-COPY src ./src
-
-# Set linker environment variables based on the target
-RUN export RUST_TARGET=$(cat /rust_target.txt) && \
+# 2. 의존성 빌드 (소스 코드 없이)
+#    - 임시 main.rs 생성
+#    - 링커 환경 변수 설정 (의존성 빌드에도 필요할 수 있음)
+#    - cargo build 실행
+#    - 임시 파일 정리
+RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+    export RUST_TARGET=$(cat /rust_target.txt) && \
+    echo "Building dependencies for target: $RUST_TARGET" && \
     case "$RUST_TARGET" in \
       "aarch64-unknown-linux-musl") export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc ;; \
       "armv7-unknown-linux-musleabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
       "arm-unknown-linux-musleabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
-      # Use the x86_64 cross-compiler for the x86_64 musl target
       "x86_64-unknown-linux-musl") export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-gnu-gcc ;; \
     esac && \
-    echo "Building for target: $RUST_TARGET" && \
-    # Perform the build
+    cargo build --release --target $RUST_TARGET && \
+    rm -rf src # 임시 src 디렉토리 삭제
+
+# 3. 실제 소스 코드 복사
+COPY src ./src
+
+# 4. 최종 빌드 (의존성 캐시 활용)
+#    - 링커 환경 변수 설정 (여기서도 필요)
+#    - cargo build 실행
+RUN export RUST_TARGET=$(cat /rust_target.txt) && \
+    echo "Building application for target: $RUST_TARGET" && \
+    case "$RUST_TARGET" in \
+      "aarch64-unknown-linux-musl") export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc ;; \
+      "armv7-unknown-linux-musleabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+      "arm-unknown-linux-musleabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+      "x86_64-unknown-linux-musl") export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-gnu-gcc ;; \
+    esac && \
     cargo build --release --target $RUST_TARGET
+
+# --- 의존성 캐싱을 위한 변경 끝 ---
 
 # Move the binary to a location free of the target since that is not available in the next stage.
 RUN cp target/$(cat /rust_target.txt)/release/overlay-mcp .

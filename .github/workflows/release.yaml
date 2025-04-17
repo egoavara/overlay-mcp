@@ -41,10 +41,10 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   build-binaries:
     name: Build Binary (${{ matrix.target }})
@@ -85,6 +85,17 @@ jobs:
           toolchain: "1.86.0"
           target: ${{ matrix.target }}
           rustflags: ${{ matrix.rustflags }}
+
+      - name: Cache Cargo registry and target directory
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target/${{ matrix.target }}/release/deps
+            target/${{ matrix.target }}/release/build
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
 
       - name: Install cross-linker if needed
         if: matrix.needs_linker_install
