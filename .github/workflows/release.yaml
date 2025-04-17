@@ -59,8 +59,9 @@ jobs:
       - name: Set up Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: stable
+          toolchain: "1.86.0"
           target: x86_64-pc-windows-msvc
+          rustflags: ""
 
       - name: Build for Windows (MSVC)
         run: cargo build --release --target x86_64-pc-windows-msvc
