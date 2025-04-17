@@ -48,9 +48,9 @@ jobs:
 
   build-and-upload-binary:
     name: Build and Upload Windows Binary
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
-      contents: write # 릴리스 에셋 업로드를 위해 쓰기 권한 필요
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -60,31 +60,23 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          target: x86_64-pc-windows-gnu # Windows GNU 타겟 지정
+          target: x86_64-pc-windows-msvc
 
-      - name: Install linker for Windows target
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64-x86-64 # MinGW 링커 설치
-
-      - name: Build for Windows
-        run: cargo build --release --target x86_64-pc-windows-gnu
-        env:
-          # Windows GNU 타겟용 링커 지정
-          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
+      - name: Build for Windows (MSVC)
+        run: cargo build --release --target x86_64-pc-windows-msvc
 
       - name: Determine Asset Name
         id: asset_name
         run: |
           RELEASE_TAG=${{ github.event.release.tag_name }}
-          echo "ASSET_NAME=overlay-mcp-${RELEASE_TAG}-windows-amd64.exe" >> $GITHUB_ENV
+          echo "ASSET_NAME=overlay-mcp-${RELEASE_TAG}-windows-amd64.exe" >> $env:GITHUB_ENV
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ github.event.release.upload_url }} # 릴리스 업로드 URL
-          asset_path: ./target/x86_64-pc-windows-gnu/release/overlay-mcp.exe # 빌드된 exe 파일 경로
-          asset_name: ${{ env.ASSET_NAME }} # 릴리스에 표시될 에셋 이름
-          asset_content_type: application/vnd.microsoft.portable-executable # 에셋의 컨텐츠 타입 
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./target/x86_64-pc-windows-msvc/release/overlay-mcp.exe
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: application/vnd.microsoft.portable-executable 
