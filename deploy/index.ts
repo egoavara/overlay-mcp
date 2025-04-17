@@ -35,7 +35,8 @@ const overlayMcpConfig = new core.v1.ConfigMap("overlay-mcp-config", {
                 "hostname": config.get("hostname"),
                 "upstream": config.get("upstream")
             },
-            "oidc": {
+            "idp": {
+                "type": "oidc-discovery",
                 "issuer": config.getSecret("oidcIssuer"),
                 "client_id": config.getSecret("oidcClientId"),
                 "client_secret": config.getSecret("oidcClientSecret"),

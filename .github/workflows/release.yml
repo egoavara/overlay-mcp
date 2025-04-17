@@ -1,0 +1,89 @@
+name: Release Docker Image and Binary
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-and-push-docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=tag
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-and-upload-binary:
+    name: Build and Upload Windows Binary
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 릴리스 에셋 업로드를 위해 쓰기 권한 필요
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-pc-windows-gnu # Windows GNU 타겟 지정
+
+      - name: Install linker for Windows target
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64 # MinGW 링커 설치
+
+      - name: Build for Windows
+        run: cargo build --release --target x86_64-pc-windows-gnu
+        env:
+          # Windows GNU 타겟용 링커 지정
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
+
+      - name: Determine Asset Name
+        id: asset_name
+        run: |
+          RELEASE_TAG=${{ github.event.release.tag_name }}
+          echo "ASSET_NAME=overlay-mcp-${RELEASE_TAG}-windows-amd64.exe" >> $GITHUB_ENV
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }} # 릴리스 업로드 URL
+          asset_path: ./target/x86_64-pc-windows-gnu/release/overlay-mcp.exe # 빌드된 exe 파일 경로
+          asset_name: ${{ env.ASSET_NAME }} # 릴리스에 표시될 에셋 이름
+          asset_content_type: application/vnd.microsoft.portable-executable # 에셋의 컨텐츠 타입 
