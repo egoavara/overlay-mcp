@@ -5,7 +5,7 @@ on:
     branches:
       - main
   release:
-    types: [created]
+    types: [released]
 
 jobs:
   package-docker:
@@ -49,6 +49,7 @@ jobs:
 
       - name: Push Docker image
         uses: docker/build-push-action@v5
+        if: ${{ startsWith(github.event.release.tag_name, 'v') }}
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -124,7 +125,7 @@ jobs:
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1.0.2
-        if: ${{ github.event.release.tag_name != 'main' }}
+        if: ${{ startsWith(github.event.release.tag_name, 'v') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
