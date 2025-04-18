@@ -47,7 +47,12 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs && \
     export RUST_TARGET=$(cat /rust_target.txt) && \
     echo "Building dependencies for target: $RUST_TARGET" && \
-    # No specific linker needed for standard GNU targets usually
+    # Set linker for cross-compilation if needed
+    case "$RUST_TARGET" in \
+      "aarch64-unknown-linux-gnu") export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc ;; \
+      "armv7-unknown-linux-gnueabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+      "arm-unknown-linux-gnueabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+    esac && \
     cargo build --release --target $RUST_TARGET && \
     rm -rf src # 임시 src 디렉토리 삭제
 
@@ -58,7 +63,12 @@ COPY src ./src
 #    - cargo build 실행
 RUN export RUST_TARGET=$(cat /rust_target.txt) && \
     echo "Building application for target: $RUST_TARGET" && \
-    # No specific linker needed for standard GNU targets usually
+    # Set linker for cross-compilation if needed
+    case "$RUST_TARGET" in \
+      "aarch64-unknown-linux-gnu") export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc ;; \
+      "armv7-unknown-linux-gnueabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+      "arm-unknown-linux-gnueabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
+    esac && \
     cargo build --release --target $RUST_TARGET
 
 # --- 의존성 캐싱을 위한 변경 끝 ---
