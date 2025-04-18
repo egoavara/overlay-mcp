@@ -1,6 +1,9 @@
 name: Release Docker Image and Binary
 
 on:
+  push:
+    branches:
+      - main
   release:
     types: [created]
 
