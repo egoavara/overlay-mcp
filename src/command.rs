@@ -35,9 +35,6 @@ pub struct Command {
     #[arg(long = "otel-endpoint", env = "OVERLAY_MCP_OTEL_ENDPOINT")]
     pub endpoint: Option<String>,
 
-    #[arg(long = "oidc", env = "OVERLAY_MCP_OIDC_ISSUER")]
-    pub oidc: Option<String>,
-
     #[arg(long = "oidc-issuer", env = "OVERLAY_MCP_OIDC_ISSUER")]
     pub issuer: Option<String>,
 

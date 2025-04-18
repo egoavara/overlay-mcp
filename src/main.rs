@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
         .log_filter
         .as_ref()
         .cloned()
-        .unwrap_or("warn".to_string())
+        .unwrap_or("info".to_string())
         .parse::<EnvFilter>()
         .unwrap();
 

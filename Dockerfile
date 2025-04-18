@@ -1,14 +1,14 @@
-# Cross-compile the app for musl to create a statically-linked binary for alpine.
+# Cross-compile the app for gnu to create a dynamically-linked binary.
 FROM --platform=$BUILDPLATFORM rust:1.86.0-bookworm AS builder
 
 ARG TARGETPLATFORM
 
 # Determine Rust target based on TARGETPLATFORM
 RUN case "$TARGETPLATFORM" in \
-      "linux/amd64") echo x86_64-unknown-linux-musl > /rust_target.txt ;; \
-      "linux/arm64") echo aarch64-unknown-linux-musl > /rust_target.txt ;; \
-      "linux/arm/v7") echo armv7-unknown-linux-musleabihf > /rust_target.txt ;; \
-      "linux/arm/v6") echo arm-unknown-linux-musleabihf > /rust_target.txt ;; \
+      "linux/amd64") echo x86_64-unknown-linux-gnu > /rust_target.txt ;; \
+      "linux/arm64") echo aarch64-unknown-linux-gnu > /rust_target.txt ;; \
+      "linux/arm/v7") echo armv7-unknown-linux-gnueabihf > /rust_target.txt ;; \
+      "linux/arm/v6") echo arm-unknown-linux-gnueabihf > /rust_target.txt ;; \
       *) exit 1 ;; \
     esac
 
@@ -17,18 +17,15 @@ RUN export RUST_TARGET=$(cat /rust_target.txt) && \
     echo "Selected Rust target: $RUST_TARGET" && \
     rustup target add $RUST_TARGET
 
-# Install necessary build tools including cross-compilers and musl tools
+# Install necessary build tools including cross-compilers
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Base tools
     binutils \
-    # Musl support
-    musl-tools \
-    musl-dev \
     # Cross-compilers for required targets (add more as needed)
     gcc-aarch64-linux-gnu \
     gcc-arm-linux-gnueabihf \
     gcc-x86-64-linux-gnu \
-    # Cross-compilation C library development files
+    # Cross-compilation C library development files (glibc)
     libc6-dev-arm64-cross \
     libc6-dev-armhf-cross \
     libc6-dev-amd64-cross \
@@ -45,18 +42,12 @@ COPY Cargo.toml Cargo.lock ./
 
 # 2. 의존성 빌드 (소스 코드 없이)
 #    - 임시 main.rs 생성
-#    - 링커 환경 변수 설정 (의존성 빌드에도 필요할 수 있음)
 #    - cargo build 실행
 #    - 임시 파일 정리
 RUN mkdir src && echo "fn main() {}" > src/main.rs && \
     export RUST_TARGET=$(cat /rust_target.txt) && \
     echo "Building dependencies for target: $RUST_TARGET" && \
-    case "$RUST_TARGET" in \
-      "aarch64-unknown-linux-musl") export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc ;; \
-      "armv7-unknown-linux-musleabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
-      "arm-unknown-linux-musleabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
-      "x86_64-unknown-linux-musl") export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-gnu-gcc ;; \
-    esac && \
+    # No specific linker needed for standard GNU targets usually
     cargo build --release --target $RUST_TARGET && \
     rm -rf src # 임시 src 디렉토리 삭제
 
@@ -64,16 +55,10 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs && \
 COPY src ./src
 
 # 4. 최종 빌드 (의존성 캐시 활용)
-#    - 링커 환경 변수 설정 (여기서도 필요)
 #    - cargo build 실행
 RUN export RUST_TARGET=$(cat /rust_target.txt) && \
     echo "Building application for target: $RUST_TARGET" && \
-    case "$RUST_TARGET" in \
-      "aarch64-unknown-linux-musl") export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc ;; \
-      "armv7-unknown-linux-musleabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
-      "arm-unknown-linux-musleabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
-      "x86_64-unknown-linux-musl") export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-gnu-gcc ;; \
-    esac && \
+    # No specific linker needed for standard GNU targets usually
     cargo build --release --target $RUST_TARGET
 
 # --- 의존성 캐싱을 위한 변경 끝 ---
@@ -81,13 +66,14 @@ RUN export RUST_TARGET=$(cat /rust_target.txt) && \
 # Move the binary to a location free of the target since that is not available in the next stage.
 RUN cp target/$(cat /rust_target.txt)/release/overlay-mcp .
 
-# Final minimal image using debian (could switch to alpine if binary is truly static)
+# Final minimal image using debian (already uses glibc)
 FROM debian:bookworm
 
 # Add /usr/local/bin to PATH
 ENV PATH="/usr/local/bin:${PATH}"
 
 # Install tini for process management and ca-certificates for HTTPS
+# Also install necessary runtime libraries (glibc is already included in debian:bookworm)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tini \
     ca-certificates \
