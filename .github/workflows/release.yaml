@@ -76,14 +76,25 @@ jobs:
             needs_linker_install: false
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            asset_name_suffix: linux-amd64
+            asset_name_suffix: linux-musl-amd64
             asset_content_type: application/octet-stream
             needs_linker_install: true
             linker: x86_64-linux-gnu-gcc
             linker_install_cmd: sudo apt-get update && sudo apt-get install -y musl-tools musl-dev gcc-x86-64-linux-gnu
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            asset_name_suffix: linux-arm64
+            asset_name_suffix: linux-musl-arm64
+            asset_content_type: application/octet-stream
+            needs_linker_install: true
+            linker: aarch64-linux-gnu-gcc
+            linker_install_cmd: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_name_suffix: linux-gnu-amd64
+            asset_content_type: application/octet-stream
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            asset_name_suffix: linux-gnu-arm64
             asset_content_type: application/octet-stream
             needs_linker_install: true
             linker: aarch64-linux-gnu-gcc
@@ -122,6 +133,17 @@ jobs:
         env:
           CC_aarch64_unknown_linux_musl: ${{ matrix.linker }}
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: ${{ matrix.linker }}
+
+      - name: Build (Linux amd64 GNU)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (Linux arm64 GNU)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: cargo build --release --target ${{ matrix.target }}
+        env:
+          CC_aarch64_unknown_linux_gnu: ${{ matrix.linker }}
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.linker }}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1.0.2
