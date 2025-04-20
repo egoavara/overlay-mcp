@@ -1,5 +1,4 @@
 use axum_client_ip::ClientIpSource;
-use hiqlite::NodeConfig;
 use jsonwebtoken::jwk::JwkSet;
 use redact::Secret;
 use serde::{Deserialize, Serialize};

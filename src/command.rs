@@ -1,5 +1,4 @@
-use clap::{arg, Args, Command, Parser, Subcommand};
-use json_patch::{AddOperation, PatchOperation};
+use clap::{arg, Args, Parser, Subcommand};
 use serde_json::{json, Map, Value};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
@@ -43,6 +42,9 @@ pub struct SubcommandRun {
         default_value_t = true
     )]
     pub health_check: bool,
+
+    #[arg(long = "raft-id", env = "OVERLAY_MCP_RAFT_ID")]
+    pub raft_id: Option<u64>,
 
     #[arg(long = "addr", env = "OVERLAY_MCP_SERVER_ADDR", default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090))]
     pub addr: SocketAddr,
@@ -114,12 +116,22 @@ impl SubcommandRun {
         figment::providers::Serialized::from(figment_value, figment::Profile::Default)
     }
     pub fn figment_merge(&self) -> figment::providers::Serialized<figment::value::Value> {
+        let mut cluster = serde_json::Map::new();
+        if let Some(raft_id) = self.raft_id {
+            cluster.insert("type".to_string(), json!("raft"));
+            cluster.insert("id".to_string(), json!(raft_id));
+        }
+
         let mut result = clean_json(json!({
             "application": {
             },
+            "upstream": {
+                "urls": self.upstream,
+            },
             "server": {
+                "addr": self.addr,
                 "hostname": self.hostname,
-                "upstream": self.upstream,
+                "cluster": cluster,
             },
             "idp": {
                 "issuer": self.issuer,

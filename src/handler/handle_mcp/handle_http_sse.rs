@@ -10,9 +10,7 @@ use axum::{
 use eventsource_client::{Client, SSE};
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use http::{Method, StatusCode, Uri};
-use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use serde::Deserialize;
-use url::Url;
 
 use crate::{
     authorizer::{AuthorizerResponse, CheckAuthorizer},

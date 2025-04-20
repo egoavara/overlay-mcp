@@ -6,7 +6,6 @@ mod handle_wellknown_oauth2authorizationserver;
 mod state;
 
 use axum::{
-    response::IntoResponse,
     routing::{get, post},
     Extension, Router,
 };
@@ -38,7 +37,7 @@ pub fn router() -> Router<AppState> {
     router
 }
 
-async fn test(Extension(mut session_manager): Extension<Manager>) -> Result<String, AnyError> {
+async fn test(Extension(session_manager): Extension<Manager>) -> Result<String, AnyError> {
     let url = session_manager.route().await?;
     Ok(url.to_string())
 }

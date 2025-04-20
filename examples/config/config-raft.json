@@ -28,11 +28,10 @@
         ]
     },
     "server": {
-        "addr": "0.0.0.0:39090",
-        "hostname": "http://localhost:39090",
+        "addr": "0.0.0.0:19090",
+        "hostname": "http://localhost:19090",
         "cluster": {
             "type": "raft",
-            "id": 3,
             "secret": "0123456789abcdef",
             "nodes": [
                 {

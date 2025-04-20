@@ -1,7 +1,6 @@
-use std::{collections::HashSet, fmt::Display, future::Future, sync::Arc, time::Duration};
+use std::{collections::HashSet, future::Future, sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
-use tracing;
 use url::Url;
 
 use crate::config::UpstreamConfig;
@@ -59,7 +58,7 @@ impl UpstreamManager {
             let mut last_urls = HashSet::new();
             loop {
                 // Use the cloned Arc inside the spawned task
-                match UpstreamManager::inner_discover(&*upstream_config_arc).await {
+                match UpstreamManager::inner_discover(&upstream_config_arc).await {
                     Ok(found_urls) => {
                         let found_urls_set = HashSet::<Url>::from_iter(found_urls.clone());
                         let found_urls_wrap = UrlVec(found_urls);

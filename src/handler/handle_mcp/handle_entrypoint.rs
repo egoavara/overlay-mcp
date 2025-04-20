@@ -5,7 +5,6 @@ use axum::{
     response::{sse::Event, Response, Sse},
     Extension,
 };
-use axum_extra::either::{Either, Either3};
 use futures_util::Stream;
 use http::StatusCode;
 
@@ -17,7 +16,7 @@ use crate::{
     utils::AnyError,
 };
 
-use super::{handle_http_sse, handle_streamable_http};
+use super::handle_http_sse;
 
 #[debug_handler]
 pub async fn handle_get(

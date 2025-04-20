@@ -17,21 +17,15 @@ use axum_health::Health;
 use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::{Cli, SubcommandRun, Subcommands};
-use config::{ClusterConfig, Config, ServerConfig};
+use config::{ClusterConfig, Config};
 use handler::AppState;
 use manager::{LocalManager, Manager, ManagerTrait, RaftManager};
 use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
 use std::{
     net::SocketAddr,
-    sync::{
-        atomic::{AtomicU8, Ordering},
-        Arc,
-    },
+    sync::Arc,
 };
-use tokio::{
-    signal::{self, unix::signal},
-    sync::Mutex,
-};
+use tokio::signal::{self};
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 
@@ -54,7 +48,7 @@ async fn main_run(cli: &SubcommandRun) -> Result<()> {
     let configfile = cli
         .configfile
         .clone()
-        .map(|filename| FigmentJson::file(filename));
+        .map(FigmentJson::file);
     // 설정 로드 (Figment 사용)
     let config: Config = Figment::new()
         .merge(SubcommandRun::figment_default())

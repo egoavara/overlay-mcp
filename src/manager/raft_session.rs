@@ -1,10 +1,7 @@
-use std::{
-    num::Wrapping,
-    sync::{
+use std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
-    },
-};
+    };
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
