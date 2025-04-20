@@ -1,7 +1,7 @@
 use std::sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    };
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -35,8 +35,26 @@ pub enum RaftCacheKey {
 
 impl RaftManager {
     pub async fn new(config: &RaftConfig) -> Result<Self> {
+        let id = match (config.id, config.index) {
+            (Some(id), None) => id,
+            (None, Some(index)) => {
+                config
+                    .nodes
+                    .get(index)
+                    .ok_or(anyhow::anyhow!("raft index out of bounds"))?
+                    .id
+            }
+            (Some(_), Some(_)) => {
+                return Err(anyhow::anyhow!(
+                    "raft id and index cannot be set at the same time"
+                ));
+            }
+            (None, None) => {
+                return Err(anyhow::anyhow!("raft id or index must be set"));
+            }
+        };
         let config = hiqlite::NodeConfig {
-            node_id: config.id,
+            node_id: id,
             raft_config: config.cluster.clone(),
             secret_raft: config.secret.clone(),
             secret_api: config.secret.clone(),

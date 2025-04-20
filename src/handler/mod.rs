@@ -7,19 +7,13 @@ mod state;
 
 use axum::{
     routing::{get, post},
-    Extension, Router,
+    Router,
 };
 pub use state::*;
-
-use crate::{
-    manager::{Manager, ManagerTrait},
-    utils::AnyError,
-};
 
 pub fn router() -> Router<AppState> {
     let mut router = Router::new();
     router = router
-        .route("/test", get(test))
         .route(
             "/mcp",
             get(handle_mcp::handle_entrypoint::handle_get)
@@ -35,9 +29,4 @@ pub fn router() -> Router<AppState> {
             get(handle_wellknown_oauth2authorizationserver::handler),
         );
     router
-}
-
-async fn test(Extension(session_manager): Extension<Manager>) -> Result<String, AnyError> {
-    let url = session_manager.route().await?;
-    Ok(url.to_string())
 }

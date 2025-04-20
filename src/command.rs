@@ -39,6 +39,9 @@ pub struct SubcommandRun {
     #[arg(long = "raft-id", env = "OVERLAY_MCP_RAFT_ID")]
     pub raft_id: Option<u64>,
 
+    #[arg(long = "raft-index", env = "OVERLAY_MCP_RAFT_INDEX")]
+    pub raft_index: Option<u64>,
+
     #[arg(long = "addr", env = "OVERLAY_MCP_SERVER_ADDR", default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090))]
     pub addr: SocketAddr,
 
@@ -113,6 +116,9 @@ impl SubcommandRun {
         if let Some(raft_id) = self.raft_id {
             cluster.insert("type".to_string(), json!("raft"));
             cluster.insert("id".to_string(), json!(raft_id));
+        }
+        if let Some(raft_index) = self.raft_index {
+            cluster.insert("index".to_string(), json!(raft_index));
         }
 
         let mut result = json!({

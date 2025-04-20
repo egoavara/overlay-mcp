@@ -89,7 +89,8 @@ impl Default for ClusterConfig {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RaftConfig {
-    pub id: u64,
+    pub id: Option<u64>,
+    pub index: Option<usize>,
     pub secret: String,
     #[serde(default)]
     pub cluster: hiqlite::RaftConfig,
