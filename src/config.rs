@@ -100,8 +100,8 @@ pub struct RaftConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Node {
     pub id: u64,
-    pub api: SocketAddr,
-    pub raft: SocketAddr,
+    pub api: String,
+    pub raft: String,
     #[serde(default = "default_read_pool_size")]
     pub read_pool_size: usize,
 }

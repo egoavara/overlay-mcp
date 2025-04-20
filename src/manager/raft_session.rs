@@ -63,8 +63,8 @@ impl RaftManager {
                 .iter()
                 .map(|node| hiqlite::Node {
                     id: node.id,
-                    addr_raft: node.raft.to_string(),
-                    addr_api: node.api.to_string(),
+                    addr_raft: node.raft.clone(),
+                    addr_api: node.api.clone(),
                 })
                 .collect(),
             ..Default::default()
