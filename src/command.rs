@@ -36,13 +36,6 @@ pub struct SubcommandRun {
     )]
     pub prometheus: bool,
 
-    #[arg(
-        long = "health-check",
-        env = "OVERLAY_MCP_HEALTH_CHECK",
-        default_value_t = true
-    )]
-    pub health_check: bool,
-
     #[arg(long = "raft-id", env = "OVERLAY_MCP_RAFT_ID")]
     pub raft_id: Option<u64>,
 
@@ -122,7 +115,7 @@ impl SubcommandRun {
             cluster.insert("id".to_string(), json!(raft_id));
         }
 
-        let mut result = clean_json(json!({
+        let mut result = json!({
             "application": {
             },
             "upstream": {
@@ -142,12 +135,9 @@ impl SubcommandRun {
             "otel": {
                 "endpoint": self.endpoint,
             }
-        }));
+        });
         if self.prometheus {
             result["application"]["prometheus"] = json!(true);
-        }
-        if !self.health_check {
-            result["application"]["health_check"] = json!(false);
         }
         if self.log_filter != "warn" {
             result["application"]["log_filter"] = json!(self.log_filter);
@@ -156,7 +146,7 @@ impl SubcommandRun {
             result["server"]["addr"] = json!(self.addr);
         }
         
-        let figment_value: figment::value::Value = serde_json::from_value(result).unwrap();
+        let figment_value: figment::value::Value = serde_json::from_value(clean_json(result)).unwrap();
         // 최종적으로 Figment의 Map<Profile, Dict> 형태로 변환
         figment::providers::Serialized::from(figment_value, figment::Profile::Default)
     }
