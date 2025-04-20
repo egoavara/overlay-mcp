@@ -143,10 +143,10 @@ impl SubcommandRun {
                 "endpoint": self.endpoint,
             }
         }));
-        if !self.prometheus {
+        if self.prometheus {
             result["application"]["prometheus"] = json!(true);
         }
-        if self.health_check {
+        if !self.health_check {
             result["application"]["health_check"] = json!(false);
         }
         if self.log_filter != "warn" {

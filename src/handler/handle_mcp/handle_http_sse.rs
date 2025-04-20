@@ -15,7 +15,7 @@ use serde::Deserialize;
 use crate::{
     authorizer::{AuthorizerResponse, CheckAuthorizer},
     handler::AppState,
-    manager::{Manager, ConnectionStateCreate, ManagerTrait},
+    manager::{ConnectionStateCreate, Manager, ManagerTrait},
     utils::{join_endpoint, AnyError, HttpComponent, PassthroughState, ReqwestResponse},
 };
 
@@ -188,7 +188,7 @@ mod event {
     use anyhow::{anyhow, Result};
     use axum::{body::Body, response::Response};
     use eventsource_client::SSE;
-    use futures_util::{FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
+    use futures_util::{Stream, StreamExt, TryFutureExt, TryStreamExt};
     use http::StatusCode;
     use tokio::{
         pin,
