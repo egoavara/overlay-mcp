@@ -44,7 +44,7 @@ COPY Cargo.toml Cargo.lock ./
 #    - 임시 main.rs 생성
 #    - cargo build 실행
 #    - 임시 파일 정리
-RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+RUN mkdir src && echo 'fn main() {println!("Invalid binary copied");}' > src/main.rs && \
     export RUST_TARGET=$(cat /rust_target.txt) && \
     echo "Building dependencies for target: $RUST_TARGET" && \
     # Set linker for cross-compilation if needed
@@ -53,7 +53,10 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs && \
       "armv7-unknown-linux-gnueabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
       "arm-unknown-linux-gnueabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
     esac && \
+    # Build dependencies only (no need to produce the dummy binary)
     cargo build --release --target $RUST_TARGET && \
+    # Clean up intermediate dummy binary if it was created (optional but safer)
+    rm -f target/$RUST_TARGET/release/overlay-mcp target/$RUST_TARGET/release/deps/overlay_mcp* && \
     rm -rf src # 임시 src 디렉토리 삭제
 
 # 3. 실제 소스 코드 복사
@@ -69,12 +72,11 @@ RUN export RUST_TARGET=$(cat /rust_target.txt) && \
       "armv7-unknown-linux-gnueabihf") export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
       "arm-unknown-linux-gnueabihf") export CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc ;; \
     esac && \
-    cargo build --release --target $RUST_TARGET
+    cargo build --release --target $RUST_TARGET && \
+    # Move the final binary to a known location
+    mv target/$RUST_TARGET/release/overlay-mcp /app/overlay-mcp
 
 # --- 의존성 캐싱을 위한 변경 끝 ---
-
-# Move the binary to a location free of the target since that is not available in the next stage.
-RUN cp target/$(cat /rust_target.txt)/release/overlay-mcp .
 
 # Final minimal image using debian (already uses glibc)
 FROM debian:bookworm
@@ -89,7 +91,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy the built binary from the builder stage
+# Copy from the known location in the builder stage
 COPY --from=builder /app/overlay-mcp /usr/local/bin/overlay-mcp
 
 # Set the entrypoint to run overlay-mcp via tini
