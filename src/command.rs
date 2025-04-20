@@ -1,26 +1,47 @@
-use clap::Parser;
-use figment::providers::Serialized;
-use figment::value::{Dict, Map as FigmentMap, Value as FigmentValue};
-use figment::{Metadata, Profile, Provider};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Map as JsonMap, Value as JsonValue};
+use clap::{arg, Args, Command, Parser, Subcommand};
+use json_patch::{AddOperation, PatchOperation};
+use serde_json::{json, Map, Value};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use url::Url;
 
-#[derive(Parser, Debug, Clone, Deserialize, Serialize)]
+#[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
-pub struct Command {
+pub struct Cli {
+    #[command(subcommand)]
+    pub subcommand: Subcommands,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum Subcommands {
+    Run(SubcommandRun),
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct SubcommandRun {
     #[arg(short, long = "config", env = "OVERLAY_MCP_CONFIG_FILE")]
     pub configfile: Option<PathBuf>,
 
-    #[arg(short,long = "log-filter", env = "OVERLAY_MCP_LOG_FILTER", default_value_t = String::from("warn"))]
+    #[arg(
+        short,
+        long = "log-filter",
+        env = "OVERLAY_MCP_LOG_FILTER",
+        default_value_t = String::from("warn")
+    )]
     pub log_filter: String,
 
-    #[arg(long = "prometheus", env = "OVERLAY_MCP_PROMETHEUS", default_value_t = false)]
+    #[arg(
+        long = "prometheus",
+        env = "OVERLAY_MCP_PROMETHEUS",
+        default_value_t = false
+    )]
     pub prometheus: bool,
 
-    #[arg(long = "health-check", env = "OVERLAY_MCP_HEALTH_CHECK", default_value_t = true)]
+    #[arg(
+        long = "health-check",
+        env = "OVERLAY_MCP_HEALTH_CHECK",
+        default_value_t = true
+    )]
     pub health_check: bool,
 
     #[arg(long = "addr", env = "OVERLAY_MCP_SERVER_ADDR", default_value_t = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090))]
@@ -47,12 +68,11 @@ pub struct Command {
     #[arg(long = "oidc-scopes", env="OVERLAY_MCP_OIDC_SCOPE", value_delimiter = ',', num_args = 1..)]
     pub scopes: Option<Vec<String>>,
 }
-
 // null 또는 빈 객체를 재귀적으로 제거하는 함수
-fn clean_json(value: JsonValue) -> JsonValue {
+fn clean_json(value: Value) -> Value {
     match value {
-        JsonValue::Object(map) => {
-            let cleaned_map: JsonMap<String, JsonValue> = map
+        Value::Object(map) => {
+            let cleaned_map: Map<String, Value> = map
                 .into_iter()
                 .filter_map(|(k, v)| {
                     let cleaned_v = clean_json(v);
@@ -65,32 +85,39 @@ fn clean_json(value: JsonValue) -> JsonValue {
                     }
                 })
                 .collect();
-            JsonValue::Object(cleaned_map)
+            Value::Object(cleaned_map)
         }
-        JsonValue::Array(arr) => {
+        Value::Array(arr) => {
             // 배열 내의 각 요소에 대해 재귀적으로 정리
             let cleaned_arr = arr.into_iter().map(clean_json).collect();
-            JsonValue::Array(cleaned_arr)
+            Value::Array(cleaned_arr)
         }
         // 다른 타입은 그대로 반환
         _ => value,
     }
 }
 
-impl Provider for Command {
-    fn metadata(&self) -> Metadata {
-        Metadata::named("command-line arguments")
-    }
-
-    fn data(&self) -> figment::Result<FigmentMap<Profile, Dict>> {
-        let mut data = json!({
+impl SubcommandRun {
+    pub fn figment_default() -> figment::providers::Serialized<figment::value::Value> {
+        
+        let figment_value: figment::value::Value = serde_json::from_value(json!({
             "application": {
-                "log_filter": self.log_filter,
-                "prometheus": self.prometheus,
-                "health_check": self.health_check,
+                "log_filter": "warn",
+                "prometheus": false,
+                "health_check": true,
             },
             "server": {
-                "addr": self.addr,
+                "addr": "0.0.0.0:9090"
+            }
+        })).unwrap();
+        // 최종적으로 Figment의 Map<Profile, Dict> 형태로 변환
+        figment::providers::Serialized::from(figment_value, figment::Profile::Default)
+    }
+    pub fn figment_merge(&self) -> figment::providers::Serialized<figment::value::Value> {
+        let mut result = clean_json(json!({
+            "application": {
+            },
+            "server": {
                 "hostname": self.hostname,
                 "upstream": self.upstream,
             },
@@ -103,30 +130,22 @@ impl Provider for Command {
             "otel": {
                 "endpoint": self.endpoint,
             }
-        });
-
-        // null 또는 빈 객체 필드 제거
-        data = clean_json(data);
-
-        if let Some(obj) = data.as_object_mut() {
-            obj.retain(|_, v| !(v.is_object() && v.as_object().unwrap().is_empty()));
+        }));
+        if !self.prometheus {
+            result["application"]["prometheus"] = json!(true);
         }
-
-        tracing::debug!(
-            "Cleaned config data from args: {}",
-            serde_json::to_string(&data)
-                .unwrap_or_else(|e| format!("Error serializing config: {}", e))
-        );
-
-        // Figment가 요구하는 타입으로 변환 시도
-        let figment_value: FigmentValue = serde_json::from_value(data).map_err(|e| {
-            figment::Error::from(format!(
-                "Failed to convert cleaned JSON to Figment Value: {}",
-                e
-            ))
-        })?;
-
+        if self.health_check {
+            result["application"]["health_check"] = json!(false);
+        }
+        if self.log_filter != "warn" {
+            result["application"]["log_filter"] = json!(self.log_filter);
+        }
+        if self.addr != SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090) {
+            result["server"]["addr"] = json!(self.addr);
+        }
+        
+        let figment_value: figment::value::Value = serde_json::from_value(result).unwrap();
         // 최종적으로 Figment의 Map<Profile, Dict> 형태로 변환
-        Serialized::from(figment_value, Profile::Default).data()
+        figment::providers::Serialized::from(figment_value, figment::Profile::Default)
     }
 }

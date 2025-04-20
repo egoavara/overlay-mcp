@@ -2,23 +2,36 @@ mod authorizer;
 mod command;
 mod config;
 mod config_loader;
+mod config_upstream;
 mod fga;
 mod handler;
+mod manager;
 mod middleware;
 mod utils;
 
 use anyhow::{Context, Result};
 use authorizer::AuthorizerEngine;
-use axum::routing::get;
+use axum::{routing::get, Extension};
 use axum_client_ip::ClientIpSource;
 use axum_health::Health;
 use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
-use command::Command;
-use config::Config;
+use command::{Cli, SubcommandRun, Subcommands};
+use config::{ClusterConfig, Config, ServerConfig};
 use handler::AppState;
+use manager::{LocalManager, Manager, ManagerTrait, RaftManager};
 use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicU8, Ordering},
+        Arc,
+    },
+};
+use tokio::{
+    signal::{self, unix::signal},
+    sync::Mutex,
+};
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 
@@ -30,21 +43,25 @@ use figment::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // dotenv 파일을 이용한 환경변수 주입
     let _ = dotenvy::dotenv();
-    let cli: Command = Command::parse();
-    let configfile = cli.configfile.clone();
-
-    // 설정 로드 (Figment 사용)
-    let mut config_loader: Figment = Figment::new();
-    if let Some(configfile) = &configfile {
-        config_loader = config_loader.merge(FigmentJson::file(configfile));
+    let cli: Cli = Cli::parse();
+    match &cli.subcommand {
+        Subcommands::Run(run) => main_run(run).await,
     }
-    let config: Config = config_loader
-        .merge(cli)
+}
+
+async fn main_run(cli: &SubcommandRun) -> Result<()> {
+    let configfile = cli
+        .configfile
+        .clone()
+        .map(|filename| FigmentJson::file(filename));
+    // 설정 로드 (Figment 사용)
+    let config: Config = Figment::new()
+        .merge(SubcommandRun::figment_default())
+        .merge(configfile.unwrap_or(FigmentJson::string("{}")))
+        .merge(cli.figment_merge())
         .extract()
         .context("Failed to load configuration")?;
-
     // 로깅 필터 설정
     let env_filter = config
         .application
@@ -85,15 +102,42 @@ async fn main() -> Result<()> {
         authorizer,
         config: config.clone(),
         reqwest: http_client,
-        configfile: Arc::new(configfile),
     };
-
-    if let Some(configfile) = &*state.configfile {
-        tracing::info!("file loaded from {}", configfile.display());
-    }
+    let upstream_manager = config.upstream.build_manager();
+    let manager: Manager = if let ClusterConfig::Raft(raft) = &config.server.cluster {
+        tracing::info!("Raft cluster: {:?}", raft);
+        let mut manager = RaftManager::new(raft).await?;
+        manager
+            .replace_route(upstream_manager.discover().await?.into_iter())
+            .await?;
+        manager.into()
+    } else {
+        tracing::warn!("🚨🚨🚨 Single host mode enabled, no cluster configuration found, don't use more than one replica for service");
+        let mut local = LocalManager::new();
+        local
+            .replace_route(upstream_manager.discover().await?.into_iter())
+            .await?;
+        local.into()
+    };
+    let manager_cloned = manager.clone();
+    upstream_manager
+        .on_change(move |urls| {
+            let mut m = manager_cloned.clone();
+            async move {
+                tracing::info!("upstream urls changed: {:?}", urls);
+                match m.replace_route(urls.into_iter()).await {
+                    Ok(_) => {}
+                    Err(err) => {
+                        tracing::error!(error = ?err, "failed to replace route");
+                    }
+                }
+            }
+        })
+        .context("failed to set upstream on_change")?;
 
     // 라우터 설정
     let mut router = handler::router().with_state(state).layer(trace_layer());
+    router = router.layer(Extension(manager.clone()));
 
     if config.application.health_check {
         let health = Health::builder().build();
@@ -130,7 +174,35 @@ async fn main() -> Result<()> {
         listener,
         router.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_signal(manager))
     .await?;
-
     Ok(())
+}
+
+async fn shutdown_signal(manager: Manager) {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+    tracing::info!("shutting down...");
+    if let Err(e) = manager.close().await {
+        tracing::error!("failed to close manager: {}", e);
+    }
 }

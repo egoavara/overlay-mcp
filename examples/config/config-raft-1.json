@@ -22,10 +22,36 @@
         ]
     },
     "upstream": {
-        "discovery": "https://mcp-db.egoavara.net/sse"
+        "urls": [
+            "http://127.0.0.1:11080/sse",
+            "http://127.0.0.1:12080/sse"
+        ]
     },
     "server": {
-        "hostname": "http://localhost:9090"
+        "addr": "0.0.0.0:29090",
+        "hostname": "http://localhost:29090",
+        "cluster": {
+            "type": "raft",
+            "id": 2,
+            "secret": "0123456789abcdef",
+            "nodes": [
+                {
+                    "id": 1,
+                    "api": "127.0.0.1:18102",
+                    "raft": "127.0.0.1:18103"
+                },
+                {
+                    "id": 2,
+                    "api": "127.0.0.1:28102",
+                    "raft": "127.0.0.1:28103"
+                },
+                {
+                    "id": 3,
+                    "api": "127.0.0.1:38102",
+                    "raft": "127.0.0.1:38103"
+                }
+            ]
+        }
     },
     "idp": {
         "type": "oidc",

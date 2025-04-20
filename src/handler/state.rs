@@ -11,7 +11,6 @@ pub struct AppState {
     pub(crate) jwt_middleware: JwtMiddlewareState,
     pub(crate) api_key_extractor: ApikeyExtractorState,
     pub(crate) authorizer: AuthorizerEngine,
-    pub(crate) configfile: Arc<Option<PathBuf>>,
     pub(crate) config: Arc<Config>,
 }
 

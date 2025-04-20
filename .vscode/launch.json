@@ -13,11 +13,15 @@
                     "build"
                 ]
             },
+            "env": {
+                "RUST_BACKTRACE": "1"
+            },
             "args": [
+                "run",
                 "-c",
                 "examples/config/config.json",
                 "--log-filter",
-                "debug",
+                "info",
                 "--prometheus"
             ]
         }

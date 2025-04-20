@@ -1,4 +1,5 @@
 use axum_client_ip::ClientIpSource;
+use hiqlite::NodeConfig;
 use jsonwebtoken::jwk::JwkSet;
 use redact::Secret;
 use serde::{Deserialize, Serialize};
@@ -6,12 +7,16 @@ use serde_with::{formats::PreferOne, serde_as, OneOrMany};
 use std::net::SocketAddr;
 use url::Url;
 
-use crate::{authorizer::Authorizer, utils::{HttpComponent, Passthrough}};
+use crate::{
+    authorizer::Authorizer,
+    utils::{HttpComponent, Passthrough},
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
     pub application: ApplicationConfig,
     pub server: ServerConfig,
+    pub upstream: UpstreamConfig,
     pub idp: IdpConfig,
     pub authorizer: Option<Authorizer>,
     pub otel: Option<OpenTelemetryConfig>,
@@ -34,9 +39,25 @@ pub struct ApplicationConfig {
     pub passthrough: Vec<Passthrough>,
 }
 
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct HttpApplicationConfig {
-    passthrough: Vec<Passthrough>,
+#[serde(untagged)]
+pub enum UpstreamConfig {
+    Static(StaticUpstream),
+    HeadlessDiscovery(HeadlessDiscoveryUpstream),
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StaticUpstream {
+    #[serde_as(as = "OneOrMany<_, PreferOne>")]
+    pub urls: Vec<Url>,
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct HeadlessDiscoveryUpstream {
+    pub discovery: Url,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -48,9 +69,42 @@ pub struct OpenTelemetryConfig {
 pub struct ServerConfig {
     pub addr: SocketAddr,
     pub hostname: Url,
-    pub upstream: Url,
+    #[serde(default)]
+    pub cluster: ClusterConfig,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
+pub enum ClusterConfig {
+    #[serde(rename = "none")]
+    None,
+    #[serde(rename = "raft")]
+    Raft(RaftConfig),
+    // TODO: Rdbms{}
+}
+impl Default for ClusterConfig {
+    fn default() -> Self {
+        Self::None {}
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RaftConfig {
+    pub id: u64,
+    pub secret: String,
+    #[serde(default)]
+    pub cluster: hiqlite::RaftConfig,
+    pub nodes: Vec<Node>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Node {
+    pub id: u64,
+    pub api: SocketAddr,
+    pub raft: SocketAddr,
+    #[serde(default = "default_read_pool_size")]
+    pub read_pool_size: usize,
+}
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum IdpConfig {
@@ -208,7 +262,6 @@ pub enum JwtAudConfig {
     Audience(Vec<String>),
 }
 
-
 fn default_required_spec_claims() -> Vec<String> {
     vec!["exp".to_string()]
 }
@@ -223,6 +276,9 @@ fn default_false() -> bool {
 
 fn default_leeway() -> u64 {
     60
+}
+fn default_read_pool_size() -> usize {
+    10
 }
 
 fn default_reject_tokens_expiring_in_less_than() -> u64 {

@@ -29,9 +29,9 @@ pub(crate) async fn handler(State(state): State<AppState>) -> impl IntoResponse 
     hostname.set_query(None);
     hostname.set_fragment(None);
 
-    let authorization_endpoint = hostname.join("/oauth2/auth").unwrap();
-    let token_endpoint = hostname.join("/oauth2/token").unwrap();
-    let registration_endpoint = hostname.join("/oauth2/client").unwrap();
+    let authorization_endpoint = hostname.join("/authorize").unwrap();
+    let token_endpoint = hostname.join("/token").unwrap();
+    let registration_endpoint = hostname.join("/register").unwrap();
 
     Json(WellKnownResponse {
         issuer: issuer.to_string(),
