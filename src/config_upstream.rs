@@ -31,6 +31,7 @@ impl UpstreamManager {
                 let resolver = hickory_resolver::Resolver::builder(provider)
                     .unwrap()
                     .build();
+                tracing::info!(query= %headless_discovery_upstream.discovery.host_str().unwrap(), "dns discovery query");
                 let lookup_result = resolver
                     .lookup_ip(headless_discovery_upstream.discovery.host_str().unwrap())
                     .await
@@ -66,13 +67,15 @@ impl UpstreamManager {
                             last_urls = found_urls_set;
                             tracing::info!(urls = %found_urls_wrap, "upstream urls changed");
                             f(found_urls_wrap.0).await;
+                        } else {
+                            tracing::info!(urls = %found_urls_wrap, "upstream urls unchanged");
                         }
                     }
                     Err(e) => {
                         tracing::error!(error = %e, "Failed to discover initial upstream URLs in on_change");
                     }
                 }
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(15)).await;
             }
         });
         Ok(())

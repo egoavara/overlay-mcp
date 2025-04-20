@@ -112,7 +112,6 @@ impl Fga {
             .json::<serde_json::Value>()
             .await
             .context("Failed to parse response body")?;
-        tracing::info!("Authorization model: {:#?}", resp);
         let found = resp.query("$.authorization_models[*].id")?;
         match found.as_slice() {
             [x, ..] => {

@@ -6,6 +6,7 @@ use axum::{
 };
 use http::{request::Parts, StatusCode};
 
+#[allow(dead_code)]
 pub struct HeaderMCPSessionId(pub String);
 
 impl<S> FromRequestParts<S> for HeaderMCPSessionId
