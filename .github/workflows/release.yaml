@@ -79,15 +79,19 @@ jobs:
             asset_name_suffix: linux-musl-amd64
             asset_content_type: application/octet-stream
             needs_linker_install: true
-            linker: x86_64-linux-gnu-gcc
-            linker_install_cmd: sudo apt-get update && sudo apt-get install -y musl-tools musl-dev gcc-x86-64-linux-gnu
+            linker: musl-gcc
+            linker_install_cmd: sudo apt-get update && sudo apt-get install -y musl-tools musl-dev
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             asset_name_suffix: linux-musl-arm64
             asset_content_type: application/octet-stream
             needs_linker_install: true
-            linker: aarch64-linux-gnu-gcc
-            linker_install_cmd: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+            linker: aarch64-linux-musl-gcc
+            linker_install_cmd: |
+              sudo apt-get update && sudo apt-get install -y curl
+              curl -O -L https://musl.cc/aarch64-linux-musl-cross.tgz
+              sudo tar xf aarch64-linux-musl-cross.tgz -C /opt
+              echo "/opt/aarch64-linux-musl-cross/bin" | sudo tee -a $GITHUB_PATH
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             asset_name_suffix: linux-gnu-amd64
