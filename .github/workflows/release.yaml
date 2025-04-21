@@ -126,6 +126,7 @@ jobs:
         env:
           CC_x86_64_unknown_linux_musl: ${{ matrix.linker }}
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: ${{ matrix.linker }}
+          CFLAGS_x86_64_unknown_linux_musl: "-std=c11 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"
 
       - name: Build (Linux arm64 MUSL)
         if: matrix.target == 'aarch64-unknown-linux-musl'
@@ -133,6 +134,7 @@ jobs:
         env:
           CC_aarch64_unknown_linux_musl: ${{ matrix.linker }}
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: ${{ matrix.linker }}
+          CFLAGS_aarch64_unknown_linux_musl: "-std=c11 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"
 
       - name: Build (Linux amd64 GNU)
         if: matrix.target == 'x86_64-unknown-linux-gnu'
