@@ -3,33 +3,27 @@ use std::{str::FromStr, time::Duration};
 use anyhow::Context;
 use axum::{
     body::Body,
-    extract::{Query, Request, State},
+    extract::{Request, State},
     response::{sse::Event, IntoResponse, Response, Sse},
     Extension,
 };
 use eventsource_client::{Client, SSE};
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use http::{Method, StatusCode, Uri};
-use serde::Deserialize;
 
 use crate::{
     authorizer::{AuthorizerResponse, CheckAuthorizer},
     handler::AppState,
-    manager::{ConnectionStateCreate, Manager, ManagerTrait},
+    manager::storage::{ConnectionStateCreate, ManagerTrait, StorageManager},
     middleware::{MCPProtocolVersion, MCPSessionId},
     utils::{join_endpoint, AnyError, HttpComponent, PassthroughState, ReqwestResponse},
 };
-
-#[derive(Deserialize)]
-pub struct UpstreamQuery {
-    pub session_id: String,
-}
 
 pub(crate) async fn handler_upstream(
     State(state): State<AppState>,
     MCPSessionId(session_id): MCPSessionId,
     CheckAuthorizer(authorizer, meta): CheckAuthorizer,
-    Extension(session_manager): Extension<Manager>,
+    Extension(session_manager): Extension<StorageManager>,
     req: Request<Body>,
 ) -> Result<Response<Body>, AnyError> {
     match authorizer {
@@ -72,7 +66,7 @@ pub(crate) async fn handler_upstream(
 pub(crate) async fn handler_downstream(
     State(state): State<AppState>,
     CheckAuthorizer(authorizer, meta): CheckAuthorizer,
-    Extension(mut session_manager): Extension<Manager>,
+    Extension(mut session_manager): Extension<StorageManager>,
     req: Request<Body>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, anyhow::Error>>>, AnyError> {
     match authorizer {
@@ -136,7 +130,7 @@ pub(crate) async fn handler_downstream(
             .query_pairs()
             .find(|x| x.0 == "session_id")
             .map(|(_, v)| v.to_string())
-            .unwrap_or_else(|| "".to_string());    
+            .unwrap_or_else(|| "".to_string());
         let session_data = session_manager
             .create(ConnectionStateCreate {
                 upstream: upstream_message,
@@ -152,16 +146,14 @@ pub(crate) async fn handler_downstream(
             .context("failed to join url")?;
         endpoint
             .query_pairs_mut()
-            .append_pair("session_id", &guard.0);
+            .append_pair("session_id", guard.session_id());
         if let Some((apikey, HttpComponent::Query { name })) = &meta.apikey_from {
             endpoint.query_pairs_mut().append_pair(name, apikey);
         }
-    
+
         yield Ok(Event::default().event("endpoint").data(&endpoint));
         let mut remote = downstream.map(move |event| match event {
             Result::Ok(SSE::Event(event)) => {
-                Result::<(), _>::Err(anyhow::anyhow!("panic_test")).unwrap();
-
                 tracing::info!("event: {:?}", event);
                 let mut response = Event::default();
                 if let Some(id) = &event.id {
@@ -285,7 +277,7 @@ mod event {
                 tracing::error!("Error waiting for endpoint event: {}", e);
                 Err(e.into())
             }
-            Err(err) => {
+            Err(_) => {
                 tracing::error!("Timeout waiting for endpoint event");
                 Err(anyhow!("Timeout waiting for endpoint event"))
             } // 타임아웃 발생

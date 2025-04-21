@@ -1,4 +1,5 @@
 mod any_error;
+pub mod urls_display;
 pub use any_error::*;
 
 mod reqwest_response;

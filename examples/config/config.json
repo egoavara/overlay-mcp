@@ -22,7 +22,7 @@
         ]
     },
     "upstream": {
-        "discovery": "https://mcp-db.egoavara.net/sse"
+        "discovery": "http://192.168.220.13/sse"
     },
     "server": {
         "hostname": "http://localhost:9090"

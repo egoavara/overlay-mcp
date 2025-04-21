@@ -5,6 +5,7 @@ mod config_loader;
 mod config_upstream;
 mod fga;
 mod handler;
+mod init;
 mod manager;
 mod middleware;
 mod utils;
@@ -17,15 +18,14 @@ use axum_health::Health;
 use axum_prometheus::PrometheusMetricLayer;
 use clap::Parser;
 use command::{Cli, SubcommandRun, Subcommands};
-use config::{ClusterConfig, Config};
+use config::Config;
 use handler::AppState;
-use manager::{LocalManager, Manager, ManagerTrait, RaftManager};
+use init::{init_storage, init_resolver};
+use manager::storage::{ManagerTrait, StorageManager};
 use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
-use std::{
-    net::SocketAddr,
-    sync::Arc,
-};
+use std::{net::SocketAddr, sync::Arc};
 use tokio::signal::{self};
+use tokio_util::sync::CancellationToken;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 
@@ -45,10 +45,7 @@ async fn main() -> Result<()> {
 }
 
 async fn main_run(cli: &SubcommandRun) -> Result<()> {
-    let configfile = cli
-        .configfile
-        .clone()
-        .map(FigmentJson::file);
+    let configfile = cli.configfile.clone().map(FigmentJson::file);
     // 설정 로드 (Figment 사용)
     let config: Config = Figment::new()
         .merge(SubcommandRun::figment_default())
@@ -73,7 +70,7 @@ async fn main_run(cli: &SubcommandRun) -> Result<()> {
     tracing::info!("{}", serde_json::to_string_pretty(&config).unwrap());
 
     // 상태 설정
-
+    let cancel = CancellationToken::new();
     let config = Arc::new(config);
 
     let http_client = reqwest::ClientBuilder::new()
@@ -97,41 +94,11 @@ async fn main_run(cli: &SubcommandRun) -> Result<()> {
         config: config.clone(),
         reqwest: http_client,
     };
-    let upstream_manager = config.upstream.build_manager();
-    let manager: Manager = if let ClusterConfig::Raft(raft) = &config.server.cluster {
-        tracing::info!("Raft cluster: {:?}", raft);
-        let mut manager = RaftManager::new(raft).await?;
-        manager
-            .replace_route(upstream_manager.discover().await?.into_iter())
-            .await?;
-        manager.into()
-    } else {
-        tracing::warn!("🚨🚨🚨 Single host mode enabled, no cluster configuration found, don't use more than one replica for service");
-        let mut local = LocalManager::new();
-        local
-            .replace_route(upstream_manager.discover().await?.into_iter())
-            .await?;
-        local.into()
-    };
-    let manager_cloned = manager.clone();
-    upstream_manager
-        .on_change(move |urls| {
-            let mut m = manager_cloned.clone();
-            async move {
-                tracing::info!("upstream urls changed: {:?}", urls);
-                match m.replace_route(urls.into_iter()).await {
-                    Ok(_) => {}
-                    Err(err) => {
-                        tracing::error!(error = ?err, "failed to replace route");
-                    }
-                }
-            }
-        })
-        .context("failed to set upstream on_change")?;
-
+    let storage_manager = init_storage(config.clone()).await?;
+    let _ = init_resolver(cancel.child_token(), config.clone(), storage_manager.clone()).await?;
     // 라우터 설정
     let mut router = handler::router().with_state(state).layer(trace_layer());
-    router = router.layer(Extension(manager.clone()));
+    router = router.layer(Extension(storage_manager.clone()));
 
     if config.application.health_check {
         let health = Health::builder().build();
@@ -168,12 +135,12 @@ async fn main_run(cli: &SubcommandRun) -> Result<()> {
         listener,
         router.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal(manager))
+    .with_graceful_shutdown(shutdown_signal(cancel, storage_manager))
     .await?;
     Ok(())
 }
 
-async fn shutdown_signal(manager: Manager) {
+async fn shutdown_signal(cancel: CancellationToken, manager: StorageManager) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -196,6 +163,7 @@ async fn shutdown_signal(manager: Manager) {
         _ = terminate => {},
     }
     tracing::info!("shutting down...");
+    cancel.cancel();
     if let Err(e) = manager.close().await {
         tracing::error!("failed to close manager: {}", e);
     }

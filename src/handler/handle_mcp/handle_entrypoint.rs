@@ -1,7 +1,7 @@
 use axum::{
     body::Body,
     debug_handler,
-    extract::{FromRequestParts, Query, Request, State},
+    extract::{FromRequestParts, Request, State},
     response::{sse::Event, Response, Sse},
     Extension,
 };
@@ -9,11 +9,7 @@ use futures_util::Stream;
 use http::StatusCode;
 
 use crate::{
-    authorizer::CheckAuthorizer,
-    handler::AppState,
-    manager::Manager,
-    middleware::{HeaderMCPProtocolVersion, MCPProtocolVersion, MCPSessionId},
-    utils::AnyError,
+    authorizer::CheckAuthorizer, handler::AppState, manager::storage::StorageManager, middleware::{HeaderMCPProtocolVersion, MCPProtocolVersion, MCPSessionId}, utils::AnyError
 };
 
 use super::handle_http_sse;
@@ -22,7 +18,7 @@ use super::handle_http_sse;
 pub async fn handle_get(
     State(state): State<AppState>,
     HeaderMCPProtocolVersion(version): HeaderMCPProtocolVersion,
-    session_manager: Extension<Manager>,
+    session_manager: Extension<StorageManager>,
     req: Request<Body>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, anyhow::Error>>>, AnyError> {
     match version {
@@ -66,7 +62,7 @@ pub async fn handle_post(
     State(state): State<AppState>,
     HeaderMCPProtocolVersion(version): HeaderMCPProtocolVersion,
     session_id: MCPSessionId,
-    session_manager: Extension<Manager>,
+    session_manager: Extension<StorageManager>,
     req: Request<Body>,
 ) -> Result<Response<Body>, AnyError> {
     match version {
@@ -87,10 +83,6 @@ pub async fn handle_post(
         }
         MCPProtocolVersion::V20250326 => {
             let (mut parts, body) = req.into_parts();
-            let query =
-                Query::<handle_http_sse::UpstreamQuery>::from_request_parts(&mut parts, &state)
-                    .await
-                    .unwrap();
             let check = CheckAuthorizer::from_request_parts(&mut parts, &state)
                 .await
                 .unwrap();

@@ -78,7 +78,7 @@ pub enum ClusterConfig {
     #[serde(rename = "none")]
     None,
     #[serde(rename = "raft")]
-    Raft(RaftConfig),
+    Raft(Box<RaftConfig>),
     // TODO: Rdbms{}
 }
 impl Default for ClusterConfig {
