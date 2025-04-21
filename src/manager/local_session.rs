@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::Result;
+use chrono::Utc;
 use tokio::sync::{Mutex, RwLock};
 use url::Url;
 use uuid::{ContextV7, Timestamp, Uuid};
@@ -82,10 +83,11 @@ impl ManagerTrait for LocalManager {
         session_id: String,
         patcher: Patcher,
     ) -> anyhow::Result<Option<ConnectionState>> {
-        let reader = self.0.sessions.read().await;
+        let reader = self.0.sessions.write().await;
         let session = reader.get(&session_id).cloned();
         if let Some(mut session) = session {
             patcher(&mut session)?;
+            session.last_accessed_at = Utc::now();
             self.0
                 .sessions
                 .write()

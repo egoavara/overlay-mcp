@@ -11,8 +11,8 @@ use http::StatusCode;
 use crate::{
     authorizer::CheckAuthorizer,
     handler::AppState,
-    middleware::{HeaderMCPProtocolVersion, MCPProtocolVersion},
     manager::Manager,
+    middleware::{HeaderMCPProtocolVersion, MCPProtocolVersion, MCPSessionId},
     utils::AnyError,
 };
 
@@ -65,6 +65,7 @@ pub async fn handle_get(
 pub async fn handle_post(
     State(state): State<AppState>,
     HeaderMCPProtocolVersion(version): HeaderMCPProtocolVersion,
+    session_id: MCPSessionId,
     session_manager: Extension<Manager>,
     req: Request<Body>,
 ) -> Result<Response<Body>, AnyError> {
@@ -72,16 +73,12 @@ pub async fn handle_post(
         // unspecified or v20241105 are treated the same way
         MCPProtocolVersion::Unspecified | MCPProtocolVersion::V20241105 => {
             let (mut parts, body) = req.into_parts();
-            let query =
-                Query::<handle_http_sse::UpstreamQuery>::from_request_parts(&mut parts, &state)
-                    .await
-                    .unwrap();
             let check = CheckAuthorizer::from_request_parts(&mut parts, &state)
                 .await
                 .unwrap();
             handle_http_sse::handler_upstream(
                 State(state),
-                query,
+                session_id,
                 check,
                 session_manager,
                 Request::from_parts(parts, body),
@@ -99,7 +96,7 @@ pub async fn handle_post(
                 .unwrap();
             handle_http_sse::handler_upstream(
                 State(state),
-                query,
+                session_id,
                 check,
                 session_manager,
                 Request::from_parts(parts, body),

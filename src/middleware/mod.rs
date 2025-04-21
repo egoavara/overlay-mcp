@@ -7,4 +7,5 @@ mod trace;
 pub use apikey_extractor::*;
 pub use jwt_extractor::*;
 pub use mcp_protocol_version::*;
+pub use mcp_session_id::*;
 pub use trace::*;

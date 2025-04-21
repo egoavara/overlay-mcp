@@ -16,6 +16,7 @@ use crate::{
     authorizer::{AuthorizerResponse, CheckAuthorizer},
     handler::AppState,
     manager::{ConnectionStateCreate, Manager, ManagerTrait},
+    middleware::{MCPProtocolVersion, MCPSessionId},
     utils::{join_endpoint, AnyError, HttpComponent, PassthroughState, ReqwestResponse},
 };
 
@@ -26,7 +27,7 @@ pub struct UpstreamQuery {
 
 pub(crate) async fn handler_upstream(
     State(state): State<AppState>,
-    Query(query): Query<UpstreamQuery>,
+    MCPSessionId(session_id): MCPSessionId,
     CheckAuthorizer(authorizer, meta): CheckAuthorizer,
     Extension(session_manager): Extension<Manager>,
     req: Request<Body>,
@@ -44,7 +45,7 @@ pub(crate) async fn handler_upstream(
     }
 
     let (mut parts, body) = req.into_parts();
-    let session_data = session_manager.get(query.session_id).await?;
+    let session_data = session_manager.get(session_id).await?;
     let Some(session_data) = session_data else {
         return Err(Response::builder()
             .status(StatusCode::NOT_FOUND)
@@ -109,7 +110,12 @@ pub(crate) async fn handler_downstream(
                 .to_string(),
         );
     }
-
+    client = client
+        .header(
+            "MCP-Protocol-Version",
+            MCPProtocolVersion::V20241105.as_header_value().unwrap(),
+        )
+        .unwrap();
     for (name, value) in dst.headers().iter() {
         if name.as_str() == "last-event-id" {
             continue;
@@ -125,35 +131,37 @@ pub(crate) async fn handler_downstream(
     let _ = event::until_connect(downstream.by_ref()).await?;
     let message = event::until_endpoint(downstream.by_ref()).await?;
     let upstream_message = join_endpoint(upstream, &message).context("failed to join url")?;
-    let session_id = upstream_message
-        .query_pairs()
-        .find(|x| x.0 == "session_id")
-        .map(|(_, v)| v.to_string())
-        .unwrap_or_else(|| "".to_string());
-    let session_data = session_manager
-        .create(ConnectionStateCreate {
-            upstream: upstream_message,
-            upstream_session_id: session_id,
-        })
-        .await?;
-    let mut endpoint = state
-        .config
-        .server
-        .hostname
-        .join("/mcp")
-        .context("failed to join url")?;
-    endpoint
-        .query_pairs_mut()
-        .append_pair("session_id", &session_data.session_id);
-    if let Some((apikey, HttpComponent::Query { name })) = &meta.apikey_from {
-        endpoint.query_pairs_mut().append_pair(name, apikey);
-    }
-
     let response = Sse::new(async_stream::stream! {
+        let session_id = upstream_message
+            .query_pairs()
+            .find(|x| x.0 == "session_id")
+            .map(|(_, v)| v.to_string())
+            .unwrap_or_else(|| "".to_string());    
+        let session_data = session_manager
+            .create(ConnectionStateCreate {
+                upstream: upstream_message,
+                upstream_session_id: session_id,
+            })
+            .await?;
+        let guard = session_manager.guard(session_data.session_id);
+        let mut endpoint = state
+            .config
+            .server
+            .hostname
+            .join("/mcp")
+            .context("failed to join url")?;
+        endpoint
+            .query_pairs_mut()
+            .append_pair("session_id", &guard.0);
+        if let Some((apikey, HttpComponent::Query { name })) = &meta.apikey_from {
+            endpoint.query_pairs_mut().append_pair(name, apikey);
+        }
+    
         yield Ok(Event::default().event("endpoint").data(&endpoint));
-
         let mut remote = downstream.map(move |event| match event {
             Result::Ok(SSE::Event(event)) => {
+                Result::<(), _>::Err(anyhow::anyhow!("panic_test")).unwrap();
+
                 tracing::info!("event: {:?}", event);
                 let mut response = Event::default();
                 if let Some(id) = &event.id {
@@ -180,6 +188,7 @@ pub(crate) async fn handler_downstream(
         while let Some(event) = remote.try_next().await? {
             yield Ok(event);
         }
+        drop(guard);
     });
     Result::Ok(response)
 }
@@ -276,7 +285,7 @@ mod event {
                 tracing::error!("Error waiting for endpoint event: {}", e);
                 Err(e.into())
             }
-            Err(_) => {
+            Err(err) => {
                 tracing::error!("Timeout waiting for endpoint event");
                 Err(anyhow!("Timeout waiting for endpoint event"))
             } // 타임아웃 발생

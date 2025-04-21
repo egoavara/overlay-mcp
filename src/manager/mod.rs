@@ -15,8 +15,7 @@ pub struct ConnectionState {
     pub session_id: String,
     pub upstream: Url,
     pub upstream_session_id: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub connected_at: DateTime<Utc>,
     pub last_accessed_at: DateTime<Utc>,
 }
 
@@ -32,8 +31,7 @@ impl ConnectionState {
             session_id,
             upstream: create.upstream,
             upstream_session_id: create.upstream_session_id,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            connected_at: Utc::now(),
             last_accessed_at: Utc::now(),
         }
     }
@@ -89,4 +87,35 @@ pub trait ManagerTrait {
 pub enum Manager {
     Local(local_session::LocalManager),
     Raft(raft_session::RaftManager),
+}
+
+impl Manager {
+    pub fn guard(&self, session_id: String) -> SessionGuard {
+        SessionGuard(session_id, self.clone())
+    }
+}
+
+pub struct SessionGuard(pub String, pub Manager);
+
+impl SessionGuard {
+    pub fn session_id(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Drop for SessionGuard {
+    fn drop(&mut self) {
+        let session_id = self.0.clone();
+        let mut manager = self.1.clone();
+        tokio::spawn(async move {
+            match manager.delete(session_id.clone()).await {
+                Ok(_) => {
+                    tracing::info!(session_id = session_id, "session deleted");
+                }
+                Err(err) => {
+                    tracing::error!(session_id=session_id, error=?err, "failed to delete session");
+                }
+            };
+        });
+    }
 }

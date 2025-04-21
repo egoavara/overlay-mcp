@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub enum MCPProtocolVersion {
     #[serde(rename = "2024-11-05")]
     V20241105,
+
     #[serde(rename = "2025-03-26")]
     V20250326,
 
@@ -30,6 +31,17 @@ impl FromStr for MCPProtocolVersion {
             "2024-11-05" => Ok(Self::V20241105),
             "2025-03-26" => Ok(Self::V20250326),
             _ => Ok(Self::Unknown(s.to_string())),
+        }
+    }
+}
+
+impl MCPProtocolVersion {
+    pub fn as_header_value(&self) -> Option<&'static str> {
+        match self {
+            Self::V20241105 => Some("2024-11-05"),
+            Self::V20250326 => Some("2025-03-26"),
+            Self::Unknown(_) => None,
+            Self::Unspecified => None,
         }
     }
 }
