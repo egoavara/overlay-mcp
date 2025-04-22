@@ -127,7 +127,7 @@ jobs:
         run: |
           # main 브랜치로의 PR이 병합되었는지 확인
           sleep 10  # PR 병합이 완료될 때까지 잠시 대기
-          PR_STATE=$(gh pr list --head ${{ steps.extract_version.outputs.source_branch }} --base main --json state -q '.[0].state' 2>/dev/null || echo "UNKNOWN")
+          PR_STATE=$(gh pr list --head ${{ steps.extract_version.outputs.source_branch }} --base main --state all --json state -q '.[0].state' 2>/dev/null || echo "UNKNOWN")
           
           if [ "$PR_STATE" = "MERGED" ] || [ "$PR_STATE" = "UNKNOWN" ]; then
             echo "pre-release 브랜치 삭제 중: ${{ steps.extract_version.outputs.source_branch }}"
