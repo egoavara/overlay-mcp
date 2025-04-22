@@ -8,7 +8,7 @@ on:
 
 jobs:
   create-release:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'pre-release/v')
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'refs/heads/pre-release/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
