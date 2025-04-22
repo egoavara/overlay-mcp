@@ -74,6 +74,7 @@ jobs:
             --base release \
             --head pre-release/v${{ github.event.inputs.version }} \
             --title "릴리즈: v${{ github.event.inputs.version }}" \
+            --label "release" \
             --body "## 릴리즈 준비: v${{ github.event.inputs.version }}
             
             이 PR은 \`v${{ github.event.inputs.version }}\` 릴리즈를 위한 준비입니다.

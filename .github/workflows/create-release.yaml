@@ -65,4 +65,74 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          token: ${{ secrets.GITHUB_TOKEN }} 
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  propagate-to-main:
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 버전 정보 추출
+        id: extract_version
+        run: |
+          VERSION=$(echo ${{ github.event.pull_request.head.ref }} | sed 's/.*pre-release\/v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "source_branch=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+
+      - name: main 브랜치에 PR 생성
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # PR 생성
+          PR_URL=$(gh pr create \
+            --base main \
+            --head ${{ steps.extract_version.outputs.source_branch }} \
+            --title "main으로 릴리즈 전파: v${{ steps.extract_version.outputs.version }}" \
+            --label "propagate" \
+            --body "## 릴리즈 v${{ steps.extract_version.outputs.version }} 변경사항 main 브랜치 전파
+            
+            이 PR은 릴리즈 브랜치의 변경사항을 main 브랜치로 전파합니다.
+            
+            ### 자동 병합
+            이 PR은 자동으로 병합됩니다.")
+          
+          echo "main으로의 PR이 생성되었습니다: $PR_URL"
+
+      - name: PR 자동 병합
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # PR 확인 및 자동 병합
+          PR_NUMBER=$(gh pr list --head ${{ steps.extract_version.outputs.source_branch }} --base main --json number -q '.[0].number')
+          if [ -n "$PR_NUMBER" ]; then
+            echo "PR #$PR_NUMBER 자동 병합 시도 중..."
+            gh pr merge $PR_NUMBER --merge --auto --delete-branch=false
+          else
+            echo "main 브랜치로의 PR을 찾을 수 없습니다."
+          fi
+
+      - name: pre-release 브랜치 삭제
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # main 브랜치로의 PR이 병합되었는지 확인
+          sleep 10  # PR 병합이 완료될 때까지 잠시 대기
+          PR_STATE=$(gh pr list --head ${{ steps.extract_version.outputs.source_branch }} --base main --json state -q '.[0].state' 2>/dev/null || echo "UNKNOWN")
+          
+          if [ "$PR_STATE" = "MERGED" ] || [ "$PR_STATE" = "UNKNOWN" ]; then
+            echo "pre-release 브랜치 삭제 중: ${{ steps.extract_version.outputs.source_branch }}"
+            git push origin --delete ${{ steps.extract_version.outputs.source_branch }}
+            echo "브랜치가 삭제되었습니다."
+          else
+            echo "main PR이 아직 병합되지 않았습니다. 브랜치를 유지합니다."
+          fi 
