@@ -44,7 +44,7 @@ jobs:
           committer: GitHub Actions <actions@github.com>
           author: GitHub Actions <actions@github.com>
           branch: pre-release/v${{ github.event.inputs.version }}
-          delete-branch: false
+          delete-branch: true
           base: release
           title: "릴리즈: v${{ github.event.inputs.version }}"
           body: |
@@ -59,8 +59,3 @@ jobs:
             이 PR이 병합되면 자동으로 릴리즈 태그가 생성됩니다.
           labels: |
             release
-
-      - name: 풀 리퀘스트 정보 출력
-        if: steps.cpr.outputs.pull-request-number
-        run: |
-          echo "풀 리퀘스트가 생성되었습니다: ${{ steps.cpr.outputs.pull-request-url }}" 
