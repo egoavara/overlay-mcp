@@ -16,51 +16,72 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: 저장소 체크아웃
+      - name: 저장소 체크아웃 (main 브랜치)
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
+
+      - name: 디버그 정보 출력
+        run: |
+          echo "현재 브랜치: $(git branch --show-current)"
+          echo "현재 커밋: $(git rev-parse HEAD)"
 
       - name: Cargo.toml 버전 업데이트
         run: |
           sed -i "s/^version = \".*\"/version = \"${{ github.event.inputs.version }}\"/" Cargo.toml
+          echo "Cargo.toml 버전 업데이트 완료"
+          grep "^version =" Cargo.toml
 
       - name: package.json 버전 업데이트
         run: |
           if [ -f "deploy/overlay-mcp/package.json" ]; then
             sed -i "s/\"version\": \".*\"/\"version\": \"${{ github.event.inputs.version }}\"/" deploy/overlay-mcp/package.json
+            echo "deploy/overlay-mcp/package.json 버전 업데이트 완료"
           fi
           
           if [ -f "deploy/develope/package.json" ]; then
             sed -i "s/\"version\": \".*\"/\"version\": \"${{ github.event.inputs.version }}\"/" deploy/develope/package.json
+            echo "deploy/develope/package.json 버전 업데이트 완료"
           fi
 
-      - name: 변경사항 커밋 및 풀 리퀘스트 생성
-        id: cpr
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: 버전을 v${{ github.event.inputs.version }}로 업데이트"
-          committer: GitHub Actions <actions@github.com>
-          author: GitHub Actions <actions@github.com>
-          branch: release/v${{ github.event.inputs.version }}
-          delete-branch: false
-          base: release
-          title: "릴리즈: v${{ github.event.inputs.version }}"
-          body: |
-            ## 릴리즈 준비: v${{ github.event.inputs.version }}
+      - name: 변경된 파일 확인
+        run: git status -s
+
+      - name: pre-release 브랜치 생성 및 변경사항 커밋
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # pre-release 브랜치 생성
+          BRANCH_NAME="pre-release/v${{ github.event.inputs.version }}"
+          git checkout -b $BRANCH_NAME
+          
+          # 변경사항 커밋
+          git add . || true
+          git commit -m "chore: 버전을 v${{ github.event.inputs.version }}로 업데이트"
+          
+          # 브랜치 푸시
+          git push -u origin $BRANCH_NAME
+          
+          echo "브랜치 생성 및 푸시 완료: $BRANCH_NAME"
+
+      - name: 풀 리퀘스트 생성
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --base release \
+            --head pre-release/v${{ github.event.inputs.version }} \
+            --title "릴리즈: v${{ github.event.inputs.version }}" \
+            --body "## 릴리즈 준비: v${{ github.event.inputs.version }}
             
-            이 PR은 `v${{ github.event.inputs.version }}` 릴리즈를 위한 준비입니다.
+            이 PR은 \`v${{ github.event.inputs.version }}\` 릴리즈를 위한 준비입니다.
             
             ### 변경사항
-            - Cargo.toml 버전 업데이트: `v${{ github.event.inputs.version }}`
-            - package.json 버전 업데이트: `v${{ github.event.inputs.version }}`
+            - Cargo.toml 버전 업데이트: \`v${{ github.event.inputs.version }}\`
+            - package.json 버전 업데이트: \`v${{ github.event.inputs.version }}\`
             
-            이 PR이 병합되면 자동으로 릴리즈 태그가 생성됩니다.
-          labels: |
-            release
-
-      - name: 풀 리퀘스트 정보 출력
-        if: steps.cpr.outputs.pull-request-number
-        run: |
-          echo "풀 리퀘스트가 생성되었습니다: ${{ steps.cpr.outputs.pull-request-url }}" 
+            이 PR이 병합되면 자동으로 릴리즈 태그가 생성됩니다.")
+          
+          echo "풀 리퀘스트가 생성되었습니다: $PR_URL"
