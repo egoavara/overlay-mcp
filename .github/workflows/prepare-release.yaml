@@ -58,7 +58,7 @@ jobs:
           git checkout -b $BRANCH_NAME
           
           # 변경사항 커밋
-          git add Cargo.toml deploy/overlay-mcp/package.json deploy/develope/package.json || true
+          git add . || true
           git commit -m "chore: 버전을 v${{ github.event.inputs.version }}로 업데이트"
           
           # 브랜치 푸시
