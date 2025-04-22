@@ -7,8 +7,20 @@ on:
       - release
 
 jobs:
+  debug-pr-info:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: 디버그 정보 출력
+        run: |
+          echo "PR Head Ref: ${{ github.event.pull_request.head.ref }}"
+          echo "PR Base Ref: ${{ github.event.pull_request.base.ref }}"
+          echo "Full Head Ref: refs/heads/${{ github.event.pull_request.head.ref }}"
+          echo "Contains pre-release/v: ${{ contains(github.event.pull_request.head.ref, 'pre-release/v') }}"
+
   create-release:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'refs/heads/pre-release/v')
+    needs: debug-pr-info
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.head.ref, 'pre-release/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,7 +34,9 @@ jobs:
       - name: 버전 정보 추출
         id: extract_version
         run: |
-          VERSION=$(echo ${{ github.event.pull_request.head.ref }} | sed 's/pre-release\/v//')
+          echo "원본 Ref: ${{ github.event.pull_request.head.ref }}"
+          VERSION=$(echo ${{ github.event.pull_request.head.ref }} | sed 's/.*pre-release\/v//')
+          echo "추출된 버전: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
