@@ -2654,7 +2654,7 @@ dependencies = [
 
 [[package]]
 name = "overlay-mcp"
-version = "0.2.0"
+version = "0.5.8"
 dependencies = [
  "anyhow",
  "async-stream",
