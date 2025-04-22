@@ -1,7 +1,7 @@
 {
     "name": "overlay-mcp-develope",
     "main": "index.ts",
-    "version": "0.0.0",
+    "version": "0.5.7",
     "devDependencies": {
         "@types/node": "^18",
         "typescript": "^5.0.0"
