@@ -19,6 +19,31 @@ use crate::{
     utils::{join_endpoint, AnyError, HttpComponent, PassthroughState, ReqwestResponse},
 };
 
+pub(crate) async fn handler_delete_session(
+    MCPSessionId(session_id): MCPSessionId,
+    CheckAuthorizer(authorizer, meta): CheckAuthorizer,
+    Extension(mut session_manager): Extension<StorageManager>,
+) -> Result<Response<Body>, AnyError> {
+    match authorizer {
+        AuthorizerResponse::Allow(_) => {}
+        AuthorizerResponse::Deny(deny) => {
+            tracing::info!("{}", deny.reason.unwrap_or("No reason".to_string()));
+            return Err(Response::builder()
+                .status(meta.expected_status_code)
+                .body(Body::empty())
+                .unwrap()
+                .into());
+        }
+    }
+
+    session_manager.delete(session_id).await?;
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .body(Body::empty())
+        .unwrap()
+        .into_response())
+}
+
 pub(crate) async fn handler_upstream(
     State(state): State<AppState>,
     MCPSessionId(session_id): MCPSessionId,

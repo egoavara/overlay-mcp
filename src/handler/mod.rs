@@ -17,7 +17,8 @@ pub fn router() -> Router<AppState> {
         .route(
             "/mcp",
             get(handle_mcp::handle_entrypoint::handle_get)
-                .post(handle_mcp::handle_entrypoint::handle_post),
+                .post(handle_mcp::handle_entrypoint::handle_post)
+                .delete(handle_mcp::handle_entrypoint::handle_delete),
         )
         // https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization#2-3-3-fallbacks-for-servers-without-metadata-discovery
         .route("/authorize", get(handle_oauth2_auth::handler))

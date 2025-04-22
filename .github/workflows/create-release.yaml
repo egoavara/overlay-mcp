@@ -1,0 +1,55 @@
+name: Create Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - release
+
+jobs:
+  create-release:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 버전 정보 추출
+        id: extract_version
+        run: |
+          VERSION=$(echo ${{ github.event.pull_request.head.ref }} | sed 's/release\/v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cargo.toml에서 버전 확인
+        id: check_cargo_version
+        run: |
+          CARGO_VERSION=$(grep "^version =" Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "cargo_version=$CARGO_VERSION" >> $GITHUB_OUTPUT
+          
+          if [ "$CARGO_VERSION" != "${{ steps.extract_version.outputs.version }}" ]; then
+            echo "버전 불일치: Cargo.toml의 버전($CARGO_VERSION)이 릴리즈 브랜치 버전(${{ steps.extract_version.outputs.version }})과 다릅니다."
+            exit 1
+          fi
+
+      - name: 릴리즈 태그 생성
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a ${{ steps.extract_version.outputs.tag }} -m "릴리즈 ${{ steps.extract_version.outputs.tag }}"
+          git push origin ${{ steps.extract_version.outputs.tag }}
+
+      - name: GitHub 릴리즈 생성
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.extract_version.outputs.tag }}
+          name: 릴리즈 ${{ steps.extract_version.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }} 

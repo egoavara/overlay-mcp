@@ -2,7 +2,6 @@ mod authorizer;
 mod command;
 mod config;
 mod config_loader;
-mod config_upstream;
 mod fga;
 mod handler;
 mod init;
@@ -135,12 +134,12 @@ async fn main_run(cli: &SubcommandRun) -> Result<()> {
         listener,
         router.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal(cancel, storage_manager))
+    .with_graceful_shutdown(shutdown_signal(cancel))
     .await?;
     Ok(())
 }
 
-async fn shutdown_signal(cancel: CancellationToken, manager: StorageManager) {
+async fn shutdown_signal(cancel: CancellationToken) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -164,7 +163,4 @@ async fn shutdown_signal(cancel: CancellationToken, manager: StorageManager) {
     }
     tracing::info!("shutting down...");
     cancel.cancel();
-    if let Err(e) = manager.close().await {
-        tracing::error!("failed to close manager: {}", e);
-    }
 }

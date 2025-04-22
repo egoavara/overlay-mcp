@@ -1,0 +1,66 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '릴리즈 버전 (예: 0.1.1)'
+        required: true
+        type: string
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cargo.toml 버전 업데이트
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ github.event.inputs.version }}\"/" Cargo.toml
+
+      - name: package.json 버전 업데이트
+        run: |
+          if [ -f "deploy/overlay-mcp/package.json" ]; then
+            sed -i "s/\"version\": \".*\"/\"version\": \"${{ github.event.inputs.version }}\"/" deploy/overlay-mcp/package.json
+          fi
+          
+          if [ -f "deploy/develope/package.json" ]; then
+            sed -i "s/\"version\": \".*\"/\"version\": \"${{ github.event.inputs.version }}\"/" deploy/develope/package.json
+          fi
+
+      - name: 변경사항 커밋 및 풀 리퀘스트 생성
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: 버전을 v${{ github.event.inputs.version }}로 업데이트"
+          committer: GitHub Actions <actions@github.com>
+          author: GitHub Actions <actions@github.com>
+          branch: release/v${{ github.event.inputs.version }}
+          delete-branch: false
+          base: release
+          title: "릴리즈: v${{ github.event.inputs.version }}"
+          body: |
+            ## 릴리즈 준비: v${{ github.event.inputs.version }}
+            
+            이 PR은 `v${{ github.event.inputs.version }}` 릴리즈를 위한 준비입니다.
+            
+            ### 변경사항
+            - Cargo.toml 버전 업데이트: `v${{ github.event.inputs.version }}`
+            - package.json 버전 업데이트: `v${{ github.event.inputs.version }}`
+            
+            이 PR이 병합되면 자동으로 릴리즈 태그가 생성됩니다.
+          labels: |
+            release
+
+      - name: 풀 리퀘스트 정보 출력
+        if: steps.cpr.outputs.pull-request-number
+        run: |
+          echo "풀 리퀘스트가 생성되었습니다: ${{ steps.cpr.outputs.pull-request-url }}" 
