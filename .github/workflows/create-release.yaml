@@ -15,8 +15,7 @@ jobs:
         run: |
           echo "PR Head Ref: ${{ github.event.pull_request.head.ref }}"
           echo "PR Base Ref: ${{ github.event.pull_request.base.ref }}"
-          echo "Full Head Ref: refs/heads/${{ github.event.pull_request.head.ref }}"
-          echo "Contains pre-release/v: ${{ contains(github.event.pull_request.head.ref, 'pre-release/v') }}"
+          echo "PR Head Label: ${{ github.event.pull_request.head.label }}"
 
   create-release:
     needs: debug-pr-info
