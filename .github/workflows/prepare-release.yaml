@@ -43,7 +43,7 @@ jobs:
           commit-message: "chore: 버전을 v${{ github.event.inputs.version }}로 업데이트"
           committer: GitHub Actions <actions@github.com>
           author: GitHub Actions <actions@github.com>
-          branch: release/v${{ github.event.inputs.version }}
+          branch: pre-release/v${{ github.event.inputs.version }}
           delete-branch: false
           base: release
           title: "릴리즈: v${{ github.event.inputs.version }}"

@@ -8,7 +8,7 @@ on:
 
 jobs:
   create-release:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'pre-release/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,7 +22,7 @@ jobs:
       - name: 버전 정보 추출
         id: extract_version
         run: |
-          VERSION=$(echo ${{ github.event.pull_request.head.ref }} | sed 's/release\/v//')
+          VERSION=$(echo ${{ github.event.pull_request.head.ref }} | sed 's/pre-release\/v//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
