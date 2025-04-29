@@ -67,6 +67,14 @@ jobs:
           generate_release_notes: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: release.yaml 워크플로우 트리거
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.extract_version.outputs.tag }}
+        run: |
+          echo "Triggering release workflow for tag $TAG_NAME"
+          gh workflow run release.yaml -f tag_name=$TAG_NAME --ref $TAG_NAME
+
   propagate-to-main:
     needs: create-release
     runs-on: ubuntu-latest

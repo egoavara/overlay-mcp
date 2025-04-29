@@ -1,14 +1,14 @@
 use anyhow::Context;
 use axum::{
-    extract::{FromRef, Query, State},
+    extract::Query,
     response::{IntoResponse, Redirect},
+    Extension,
 };
 use oauth2::{CsrfToken, PkceCodeChallenge, RedirectUrl, Scope};
 use serde::Deserialize;
 
-use crate::{middleware::JwtMiddlewareState, utils::AnyError};
+use crate::{manager::auth::authenticate::Authenticater, utils::AnyError};
 
-use super::AppState;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -21,7 +21,7 @@ pub(crate) struct AuthParams {
 }
 
 pub(crate) async fn handler(
-    State(state): State<AppState>,
+    Extension(authenticater): Extension<Authenticater>,
     Query(query): Query<AuthParams>,
 ) -> Result<impl IntoResponse, AnyError> {
     let code_challenge = serde_json::from_value::<PkceCodeChallenge>(serde_json::json!(
@@ -31,17 +31,15 @@ pub(crate) async fn handler(
         }
     ))
     .context("code challenge")?;
-    let jwt_middleware = JwtMiddlewareState::from_ref(&state);
-    let oauth_client = jwt_middleware
-        .oauth_client
-        .clone()
+    let oauth_client = authenticater
+        .create_oauth_client()
         .set_redirect_uri(RedirectUrl::new(query.redirect_uri).context("redirect url")?);
 
     let mut auth_request = oauth_client
         .authorize_url(CsrfToken::new_random)
         .set_pkce_challenge(code_challenge);
 
-    for scope in &jwt_middleware.client_config.scopes {
+    for scope in &authenticater.client_config.scopes {
         auth_request = auth_request.add_scope(Scope::new(scope.clone()));
     }
 

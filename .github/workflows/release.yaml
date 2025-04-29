@@ -6,6 +6,14 @@ on:
       - main
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'The release tag to build and publish (e.g., v1.0.0)'
+        required: true
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag_name || github.event.release.tag_name }}
 
 jobs:
   package-docker:
@@ -14,10 +22,11 @@ jobs:
     permissions:
       contents: read
       packages: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -35,8 +44,12 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=tag # Git 태그 그대로 사용 (예: v0.3.0)
-            type=semver,pattern={{version}} # Git 태그에서 'v' 제거 (예: 0.3.0)
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=${{ env.RELEASE_TAG }}
 
       - name: Build Docker image
         uses: docker/build-push-action@v5
@@ -49,7 +62,6 @@ jobs:
 
       - name: Push Docker image
         uses: docker/build-push-action@v5
-        if: ${{ startsWith(github.event.release.tag_name, 'v') }}
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -64,6 +76,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
+    if: (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.tag_name, 'v')) || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
     strategy:
       fail-fast: false
       matrix:
@@ -106,6 +119,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -151,13 +166,12 @@ jobs:
           CC_aarch64_unknown_linux_gnu: ${{ matrix.linker }}
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.linker }}
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1.0.2
-        if: ${{ startsWith(github.event.release.tag_name, 'v') }}
+      - name: Upload Release Asset (using gh cli)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/overlay-mcp${{ endsWith(matrix.asset_name_suffix, '.exe') && '.exe' || '' }}
-          asset_name: overlay-mcp-${{ github.event.release.tag_name }}-${{ matrix.asset_name_suffix }}
-          asset_content_type: ${{ matrix.asset_content_type }} 
+        run: |
+          ASSET_PATH="./target/${{ matrix.target }}/release/overlay-mcp${{ endsWith(matrix.asset_name_suffix, '.exe') && '.exe' || '' }}"
+          ASSET_NAME="overlay-mcp-${{ env.RELEASE_TAG }}-${{ matrix.asset_name_suffix }}"
+          echo "Uploading $ASSET_PATH as $ASSET_NAME to tag ${{ env.RELEASE_TAG }}"
+          gh release upload "${{ env.RELEASE_TAG }}" "$ASSET_PATH" --clobber
+        shell: bash 

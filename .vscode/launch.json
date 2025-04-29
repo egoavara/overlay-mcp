@@ -21,7 +21,7 @@
                 "-c",
                 "examples/config/config.json",
                 "--log-filter",
-                "info",
+                "info,rmcp::transport::sse=warn,tower_http::trace::on_response=warn",
                 "--prometheus"
             ]
         }

@@ -9,6 +9,19 @@ pub enum AnyError {
     Response(Response<Body>),
 }
 
+impl AnyError {
+    pub fn error<A: AsRef<str>>(msg: A) -> AnyError {
+        AnyError::Anyhow(anyhow::anyhow!(msg.as_ref().to_string()))
+    }
+    pub fn http<S: Into<String>>(status: StatusCode, body: S) -> AnyError {
+        Response::builder()
+            .status(status)
+            .body(Body::from(body.into()))
+            .unwrap()
+            .into()
+    }
+}
+
 impl From<anyhow::Error> for AnyError {
     fn from(error: anyhow::Error) -> Self {
         AnyError::Anyhow(error)

@@ -9,7 +9,6 @@
         ]
     },
     "auth": {
-        "type": "OpenFga",
         "authn": {
             "apikey": {
                 "key_from": [
@@ -34,34 +33,20 @@
                 }
             }
         },
-        "openfga": {
-            "url": "http://192.168.220.0:8080",
-            "store": "test-store",
-            "check": {
-                "group": "mcp",
-                "relation": "allow"
-            },
+        "constant": {
             "apikey": {
-                "group": "apikey"
-            },
-            "jwt": {
-                "group": "jwt",
-                "claim_path": "/sub",
-                "context_fields": [
-                    {
-                        "type": "string",
-                        "path": "/email",
-                        "group": "email",
-                        "relation": "target"
-                    },
-                    {
-                        "type": "string[]",
-                        "path": "/groups",
-                        "group": "group",
-                        "relation": "member"
-                    }
+                "whitelist": [
+                    "1234567890"
                 ]
-            }
+            },
+            "jwt": [
+                {
+                    "path": "/email",
+                    "whitelist": [
+                        "egoavara@gmail.com"
+                    ]
+                }
+            ]
         }
     },
     "upstream": {

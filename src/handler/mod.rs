@@ -14,12 +14,14 @@ pub use state::*;
 pub fn router() -> Router<AppState> {
     let mut router = Router::new();
     router = router
-        .route(
-            "/mcp",
-            get(handle_mcp::handle_entrypoint::handle_get)
-                .post(handle_mcp::handle_entrypoint::handle_post)
-                .delete(handle_mcp::handle_entrypoint::handle_delete),
-        )
+        // .route(
+        //     "/mcp",
+        //     get(handle_mcp::handle_entrypoint::handle_get)
+        //         .post(handle_mcp::handle_entrypoint::handle_post)
+        //         .delete(handle_mcp::handle_entrypoint::handle_delete),
+        // )
+        .route("/sse", get(handle_mcp::handle_http_sse::handler_downstream))
+        .route("/message", post(handle_mcp::handle_http_sse::handler_upstream))
         // https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization#2-3-3-fallbacks-for-servers-without-metadata-discovery
         .route("/authorize", get(handle_oauth2_auth::handler))
         .route("/token", post(handle_oauth2_token::handler))

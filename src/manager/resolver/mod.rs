@@ -41,7 +41,7 @@ impl ResolverManager {
                             last_urls = found_urls.clone();
                             tracing::info!(urls = %found_urls_wrap, "upstream urls changed");
                         } else {
-                            tracing::info!(urls = %found_urls_wrap, "upstream urls unchanged");
+                            tracing::debug!(urls = %found_urls_wrap, "upstream urls unchanged");
                         }
                     }
                     Err(e) => {
@@ -64,7 +64,7 @@ impl ResolverManager {
         resolver: &Resolver<GenericConnector<TokioRuntimeProvider>>,
         url: &Url,
     ) -> Result<HashSet<Url>> {
-        tracing::info!(query= %url, "dns discovery query");
+        tracing::debug!(query= %url, "dns discovery query");
         let lookup_result = resolver
             .lookup_ip(url.host_str().unwrap())
             .await
