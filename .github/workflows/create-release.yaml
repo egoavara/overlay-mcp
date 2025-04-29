@@ -63,7 +63,7 @@ jobs:
           tag_name: ${{ steps.extract_version.outputs.tag }}
           name: 릴리즈 ${{ steps.extract_version.outputs.tag }}
           draft: false
-          prerelease: false
+          prerelease: true
           generate_release_notes: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
