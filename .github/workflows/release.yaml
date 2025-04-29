@@ -22,8 +22,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    if: (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.tag_name, 'v')) || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
