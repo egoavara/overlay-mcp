@@ -172,6 +172,8 @@ jobs:
         run: |
           ASSET_PATH="./target/${{ matrix.target }}/release/overlay-mcp${{ endsWith(matrix.asset_name_suffix, '.exe') && '.exe' || '' }}"
           ASSET_NAME="overlay-mcp-${{ env.RELEASE_TAG }}-${{ matrix.asset_name_suffix }}"
-          echo "Uploading $ASSET_PATH as $ASSET_NAME to tag ${{ env.RELEASE_TAG }}"
-          gh release upload "${{ env.RELEASE_TAG }}" "$ASSET_PATH" --clobber
+          echo "Copying $ASSET_PATH to $ASSET_NAME for upload"
+          cp "$ASSET_PATH" "$ASSET_NAME"
+          echo "Uploading $ASSET_NAME to tag ${{ env.RELEASE_TAG }}"
+          gh release upload "${{ env.RELEASE_TAG }}" "$ASSET_NAME" --clobber
         shell: bash 
