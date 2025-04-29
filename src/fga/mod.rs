@@ -2,7 +2,7 @@ mod schema;
 
 use std::{collections::HashMap, str::FromStr};
 
-use anyhow::{Context, Ok, Result};
+use anyhow::{Context, Result};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use jsonpath_rust::JsonPath;
 use serde::Deserialize;
@@ -14,7 +14,7 @@ pub struct Fga {
     client: reqwest::Client,
     url: Url,
     store_id: String,
-    
+
     #[allow(dead_code)]
     authorization_model_id: Option<String>,
 }
@@ -22,7 +22,7 @@ pub struct Fga {
 #[derive(Debug, Deserialize)]
 struct CheckResponse {
     allowed: bool,
-    
+
     #[allow(dead_code)]
     resolution: String,
 }
@@ -171,15 +171,13 @@ impl Fga {
             },
         });
         tracing::info!("body: {:#?}", body);
-        let resp = self
-            .client
-            .post(checkurl)
-            .json(&body)
-            .send()
-            .await?
-            .json::<CheckResponse>()
-            .await?;
-
-        Ok(resp.allowed)
+        let resp = self.client.post(checkurl).json(&body).send().await?;
+        if !resp.status().is_success() {
+            let body = resp.text().await?;
+            tracing::error!("Failed to check: {}", body);
+            return Ok(false);
+        }
+        let body = resp.json::<CheckResponse>().await?;
+        Ok(body.allowed)
     }
 }

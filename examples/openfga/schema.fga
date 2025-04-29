@@ -1,0 +1,20 @@
+model
+  schema 1.1
+
+type apikey
+
+type jwt
+
+type group
+  relations
+    define member: [jwt] or member from parent
+    define parent: [group]
+
+type email
+  relations
+    define target: [jwt]
+
+type mcp
+  relations
+    define allow: [apikey, jwt, jwt:*, group#member, email#target] but not deny
+    define deny: [apikey, jwt, group#member, email#target]

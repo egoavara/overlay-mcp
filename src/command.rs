@@ -97,7 +97,6 @@ fn clean_json(value: Value) -> Value {
 
 impl SubcommandRun {
     pub fn figment_default() -> figment::providers::Serialized<figment::value::Value> {
-        
         let figment_value: figment::value::Value = serde_json::from_value(json!({
             "application": {
                 "log_filter": "warn",
@@ -107,7 +106,8 @@ impl SubcommandRun {
             "server": {
                 "addr": "0.0.0.0:9090"
             }
-        })).unwrap();
+        }))
+        .unwrap();
         // 최종적으로 Figment의 Map<Profile, Dict> 형태로 변환
         figment::providers::Serialized::from(figment_value, figment::Profile::Default)
     }
@@ -127,16 +127,22 @@ impl SubcommandRun {
             "upstream": {
                 "urls": self.upstream,
             },
+            "auth": {
+                "authn": {
+                    "jwt": {
+                        "issuer": self.issuer,
+                        "client": {
+                            "id": self.client_id,
+                            "secret": self.client_secret,
+                            "scopes": self.scopes,
+                        }
+                    }
+                }
+            },
             "server": {
                 "addr": self.addr,
                 "hostname": self.hostname,
                 "cluster": cluster,
-            },
-            "idp": {
-                "issuer": self.issuer,
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "scopes": self.scopes,
             },
             "otel": {
                 "endpoint": self.endpoint,
@@ -151,8 +157,9 @@ impl SubcommandRun {
         if self.addr != SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 9090) {
             result["server"]["addr"] = json!(self.addr);
         }
-        
-        let figment_value: figment::value::Value = serde_json::from_value(clean_json(result)).unwrap();
+
+        let figment_value: figment::value::Value =
+            serde_json::from_value(clean_json(result)).unwrap();
         // 최종적으로 Figment의 Map<Profile, Dict> 형태로 변환
         figment::providers::Serialized::from(figment_value, figment::Profile::Default)
     }

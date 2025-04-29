@@ -1,16 +1,15 @@
-mod authorizer;
 mod command;
 mod config;
-mod config_loader;
 mod fga;
 mod handler;
 mod init;
 mod manager;
+mod mcp;
 mod middleware;
+mod reqmodifier;
 mod utils;
 
 use anyhow::{Context, Result};
-use authorizer::AuthorizerEngine;
 use axum::{routing::get, Extension};
 use axum_client_ip::ClientIpSource;
 use axum_health::Health;
@@ -19,12 +18,13 @@ use clap::Parser;
 use command::{Cli, SubcommandRun, Subcommands};
 use config::Config;
 use handler::AppState;
-use init::{init_storage, init_resolver};
-use manager::storage::{ManagerTrait, StorageManager};
-use middleware::{trace_layer, ApikeyExtractorState, JwtMiddlewareState};
+use init::{init_resolver, init_storage};
+use manager::auth::new_auth;
+use middleware::trace_layer;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::signal::{self};
 use tokio_util::sync::CancellationToken;
+use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 
@@ -77,27 +77,29 @@ async fn main_run(cli: &SubcommandRun) -> Result<()> {
         .build()
         .expect("Client should build");
 
-    let (issuer, oauth_client, valiator_set, client_config) = config.idp.load(&http_client).await?;
+    let (authenticater_layer, authorizer_layer) = new_auth(&config.auth).await?;
 
-    let authorizer = AuthorizerEngine::new(config.authorizer.clone()).await;
-    let api_key_extractor = ApikeyExtractorState::load(config.application.apikey.clone()).await?;
     // 애플리케이션 상태 설정 (config 사용)
     let state = AppState {
-        jwt_middleware: JwtMiddlewareState::new(issuer, oauth_client, valiator_set, client_config)
-            .map_err(|err| {
-                tracing::error!("Failed to create JwtMiddlewareState: {}", err);
-                err
-            })?,
-        api_key_extractor,
-        authorizer,
         config: config.clone(),
         reqwest: http_client,
     };
     let storage_manager = init_storage(config.clone()).await?;
-    let _ = init_resolver(cancel.child_token(), config.clone(), storage_manager.clone()).await?;
+    let _ = init_resolver(
+        cancel.child_token(),
+        config.clone(),
+        storage_manager.clone(),
+    )
+    .await?;
     // 라우터 설정
-    let mut router = handler::router().with_state(state).layer(trace_layer());
-    router = router.layer(Extension(storage_manager.clone()));
+    let mut router = handler::router().with_state(state).layer(
+        ServiceBuilder::new()
+            .layer(trace_layer())
+            .layer(Extension(storage_manager.clone()))
+            .layer(Extension(Arc::new(config.application.passthrough.clone())))
+            .layer(authenticater_layer)
+            .layer(authorizer_layer),
+    );
 
     if config.application.health_check {
         let health = Health::builder().build();

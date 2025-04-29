@@ -7,7 +7,7 @@ use crate::{
     config::{ClusterConfig, Config, UpstreamConfig},
     manager::{
         resolver::ResolverManager,
-        storage::{LocalManager, ManagerTrait, StorageManager, RaftManager},
+        storage::{LocalManager, ManagerTrait, RaftManager, StorageManager},
     },
 };
 
@@ -32,7 +32,7 @@ pub async fn init_resolver(
     let resolver_manager = ResolverManager::new(ct);
     match &config.upstream {
         UpstreamConfig::Static(static_config) => {
-            let mut manager = ref_manager.clone();
+            let manager = ref_manager.clone();
             manager
                 .replace_route(static_config.urls.clone().into_iter())
                 .await?;
@@ -40,7 +40,7 @@ pub async fn init_resolver(
         UpstreamConfig::HeadlessDiscovery(dynamic_config) => {
             resolver_manager
                 .listen(dynamic_config.discovery.clone(), move |urls| {
-                    let mut mananger = ref_manager.clone();
+                    let mananger = ref_manager.clone();
                     async move {
                         tracing::info!("upstream urls changed: {:?}", urls);
                         match mananger.replace_route(urls.into_iter()).await {

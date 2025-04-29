@@ -2,86 +2,93 @@
     "application": {
         "log_filter": "info",
         "ip_extract": "ConnectInfo",
-        "apikey": [
+        "passthrough": [
             {
-                "type": "header",
-                "name": "X-API-KEY"
-            },
-            {
-                "type": "header",
-                "name": "X-API-KEY"
-            },
-            {
-                "type": "query",
-                "name": "apikey"
-            },
-            {
-                "type": "query",
-                "name": "api-key"
+                "from": "header:API-KEY"
             }
         ]
     },
+    "auth": {
+        "type": "OpenFga",
+        "authn": {
+            "apikey": {
+                "key_from": [
+                    "header:X-API-KEY",
+                    "header:API-KEY",
+                    "query:apikey",
+                    "query:api-key"
+                ]
+            },
+            "jwt": {
+                "type": "oidc-discovery",
+                "issuer": "https://dex.egoavara.net",
+                "client": {
+                    "id": "mcp-db",
+                    "secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it here",
+                    "scopes": [
+                        "openid",
+                        "email",
+                        "profile",
+                        "groups"
+                    ]
+                }
+            }
+        },
+        "openfga": {
+            "url": "http://192.168.220.0:8080",
+            "store": "test-store",
+            "check": {
+                "group": "mcp",
+                "relation": "allow"
+            },
+            "apikey": {
+                "group": "apikey"
+            },
+            "jwt": {
+                "group": "jwt",
+                "claim_path": "/sub",
+                "context_fields": [
+                    {
+                        "type": "string",
+                        "path": "/email",
+                        "group": "email",
+                        "relation": "target"
+                    },
+                    {
+                        "type": "string[]",
+                        "path": "/groups",
+                        "group": "group",
+                        "relation": "member"
+                    }
+                ]
+            }
+        }
+    },
     "upstream": {
-        "urls": [
-            "http://127.0.0.1:11080/sse",
-            "http://127.0.0.1:12080/sse"
-        ]
+        "discovery": "http://192.168.220.13/sse"
     },
     "server": {
-        "addr": "0.0.0.0:19090",
-        "hostname": "http://localhost:19090",
+        "hostname": "USING ${OVERLAY_MCP_HOSTNAME} or `--hostname ?` option or write it here",
         "cluster": {
             "type": "raft",
-            "secret": "0123456789abcdef",
+            "secret": "Using ${OVERLAY_MCP_RAFT_SECRET} or `--raft-secret ?` option or write it here",
             "nodes": [
                 {
                     "id": 1,
-                    "api": "127.0.0.1:18102",
-                    "raft": "127.0.0.1:18103"
+                    "api": "127.0.0.1:28081",
+                    "raft": "127.0.0.1:28091"
                 },
                 {
                     "id": 2,
-                    "api": "127.0.0.1:28102",
-                    "raft": "127.0.0.1:28103"
+                    "api": "127.0.0.1:28082",
+                    "raft": "127.0.0.1:28092"
                 },
                 {
                     "id": 3,
-                    "api": "127.0.0.1:38102",
-                    "raft": "127.0.0.1:38103"
+                    "api": "127.0.0.1:28083",
+                    "raft": "127.0.0.1:28093"
                 }
             ]
-        }
-    },
-    "idp": {
-        "type": "oidc",
-        "issuer": "https://dex.egoavara.net",
-        "auth_url": "https://dex.egoavara.net/auth",
-        "token_url": "https://dex.egoavara.net/token",
-        "jwt": {
-            "jwk_url": "https://dex.egoavara.net/keys"
-        },
-        "client_id": "mcp-db",
-        "client_secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it here",
-        "scopes": [
-            "openid",
-            "email",
-            "profile",
-            "groups"
-        ]
-    },
-    "authorizer": {
-        "apikey": {
-            "whitelist": [
-                "1234567890"
-            ]
-        },
-        "jwt": {
-            "fields": {
-                "field": "/email",
-                "whitelist": [
-                    "egoavara@gmail.com"
-                ]
-            }
         }
     }
 }
