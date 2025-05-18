@@ -1,0 +1,46 @@
+[package]
+name = "overlay-mcp-svr"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+httpbuilder = { workspace = true }
+overlay-mcp-core = { workspace = true }
+overlay-mcp-auth = { workspace = true }
+overlay-mcp-resolver = { workspace = true }
+overlay-mcp-session-manager = { workspace = true }
+overlay-mcp-raft = { workspace = true }
+
+# Workspace dependencies
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+futures = { workspace = true }
+async-stream = { workspace = true }
+
+axum = { workspace = true }
+axum-extra = { workspace = true }
+axum-prometheus = { workspace = true }
+axum-client-ip = { workspace = true }
+axum-health = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+reqwest = { workspace = true }
+http = { workspace = true }
+http-body-util = { workspace = true }
+mime = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+futures-util = { workspace = true }
+oauth2 = { workspace = true }
+url = { workspace = true }
+rand = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+# Other specific dependencies
+rmcp = { workspace = true }
+[dev-dependencies]
+# Add dependencies needed for tests, e.g., http mocking

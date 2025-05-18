@@ -1,0 +1,74 @@
+{
+    "folders": [
+        {
+            "name": "⌨️ overlay-mcp:cli",
+            "path": "crates/overlay-mcp-cli/src"
+        },
+        {
+            "name": "🏗️ overlay-mcp:core ",
+            "path": "crates/overlay-mcp-core/src"
+        },
+        {
+            "name": "🔎 overlay-mcp:resolver ",
+            "path": "crates/overlay-mcp-resolver/src"
+        },
+        {
+            "name": "🔑 overlay-mcp:auth ",
+            "path": "crates/overlay-mcp-auth/src"
+        },
+        {
+            "name": "🚥 overlay-mcp:session-manager",
+            "path": "crates/overlay-mcp-session-manager/src"
+        },
+        {
+            "name": "🚥 overlay-mcp:session-manager 💁‍♂️ :standalone",
+            "path": "crates/overlay-mcp-standalone/src"
+        },
+        {
+            "name": "🚥 overlay-mcp:session-manager 👨‍👨‍👦‍👦 :raft",
+            "path": "crates/overlay-mcp-raft/src"
+        },
+        {
+            "name": "🖥️ overlay-mcp:svr",
+            "path": "crates/overlay-mcp-svr/src"
+        },
+        {
+            "name": "📚 httpbuilder",
+            "path": "crates/httpbuilder/src"
+        },
+        {
+            "name": "📚 openfga",
+            "path": "crates/openfga/src"
+        },
+        {
+            "name": "🏅 Test [k6]",
+            "path": "scripts/load-k6"
+        },
+        {
+            "name": "🔒 root",
+            "path": "."
+        }
+    ],
+    "extensions": {
+        "recommendations": ["swellaby.rust-pack", "serayuzgur.crates", "vadimcn.vscode-lldb", "github.vscode-github-actions", "esbenp.prettier-vscode"]
+    },
+    "settings": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "always",
+            "source.organizeImports": "always"
+        },
+        "[javascript][typescript]": {
+            "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[typescriptreact][javascriptreact]": {
+            "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[json][jsonc][jsonl]": {
+            "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[rust]": {
+            "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        }
+    }
+}

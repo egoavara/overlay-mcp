@@ -3,11 +3,25 @@
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
+    "inputs": [
+        {
+            "type": "pickString",
+            "id": "config",
+            "description": "Select the config file",
+            "options": [
+                "examples/config/config-constant.json",
+                "examples/config/config.json"
+            ]
+        }
+    ],
     "configurations": [
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Cargo launch",
+            "name": "Standalone [Server]",
+            "presentation": {
+                "hidden": true,
+            },
             "cargo": {
                 "args": [
                     "build"
@@ -19,10 +33,149 @@
             "args": [
                 "run",
                 "-c",
-                "examples/config/config.json",
+                "${input:config}",
                 "--log-filter",
-                "info,rmcp::transport::sse=warn,tower_http::trace::on_response=warn",
+                // "info,rmcp::transport::sse=warn,tower_http::trace::on_response=warn",
+                "info",
                 "--prometheus"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Raft [node-00]",
+            "presentation": {
+                "hidden": true,
+            },
+            "env": {
+                "RUST_BACKTRACE": "1"
+            },
+            "program": "${workspaceFolder}/target/debug/overlay-mcp",
+            "args": [
+                "run",
+                "--addr",
+                "0.0.0.0:18080",
+                "--hostname",
+                "http://localhost:18080",
+                "-c",
+                "examples/config/config-raft.json",
+                "--raft-index",
+                "0",
+                "--log-filter",
+                // "info,rmcp::transport::sse=warn,tower_http::trace::on_response=warn",
+                "info",
+                "--prometheus"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Raft [node-01]",
+            "presentation": {
+                "hidden": true,
+            },
+            "program": "${workspaceFolder}/target/debug/overlay-mcp",
+            "env": {
+                "RUST_BACKTRACE": "1"
+            },
+            "args": [
+                "run",
+                "--addr",
+                "0.0.0.0:28080",
+                "--hostname",
+                "http://localhost:28080",
+                "-c",
+                "examples/config/config-raft.json",
+                "--raft-index",
+                "1",
+                "--log-filter",
+                // "info,rmcp::transport::sse=warn,tower_http::trace::on_response=warn",
+                "info",
+                "--prometheus"
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Raft [node-02]",
+            "presentation": {
+                "hidden": true,
+            },
+            "env": {
+                "RUST_BACKTRACE": "1"
+            },
+            "program": "${workspaceFolder}/target/debug/overlay-mcp",
+            "args": [
+                "run",
+                "--addr",
+                "0.0.0.0:38080",
+                "--hostname",
+                "http://localhost:38080",
+                "-c",
+                "examples/config/config-raft.json",
+                "--raft-index",
+                "2",
+                "--log-filter",
+                // "info,rmcp::transport::sse=warn,tower_http::trace::on_response=warn",
+                "info",
+                "--prometheus"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Raft [Reverse Proxy]",
+            "console": "integratedTerminal",
+            "presentation": {
+                "hidden": true,
+            },
+            "program": "${workspaceFolder}/scripts/debugtools/reverse-proxy.js",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "MCP Inspector",
+            "console": "integratedTerminal",
+            "presentation": {
+                "hidden": false,
+                "group": "Debug",
+                "order": 3
+            },
+            "program": "${workspaceFolder}/scripts/debugtools/mcp-inspector.js",
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Raft",
+            "stopAll": true,
+            "preLaunchTask": "cargo:build",
+            "presentation": {
+                "hidden": false,
+                "group": "Debug",
+                "order": 1
+            },
+            "configurations": [
+                "Raft [node-00]",
+                "Raft [node-01]",
+                "Raft [node-02]",
+                "Raft [Reverse Proxy]",
+                "MCP Inspector"
+            ]
+        },
+        {
+            "name": "Standalone",
+            "presentation": {
+                "hidden": false,
+                "group": "Debug",
+                "order": 2
+            },
+            "stopAll": true,
+            "preLaunchTask": "cargo:build",
+            "configurations": [
+                "Standalone [Server]",
+                "MCP Inspector"
             ]
         }
     ]

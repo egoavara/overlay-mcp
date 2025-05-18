@@ -1,0 +1,31 @@
+[package]
+name = "overlay-mcp-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "overlay-mcp"
+path = "src/main.rs"
+
+[dependencies]
+overlay-mcp-core = { workspace = true }
+overlay-mcp-svr = { workspace = true }
+overlay-mcp-auth = { workspace = true }
+httpbuilder = { workspace = true }
+# overlay-mcp-fga = { path = "../overlay-mcp-fga" } # Depending on features
+# overlay-mcp-standalone = { path = "../overlay-mcp-standalone" } # Depending on features
+# overlay-mcp-raft = { path = "../overlay-mcp-raft" } # Depending on features
+
+# Workspace dependencies
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }
+figment = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+dotenvy = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde_json = { workspace = true }         # For logging config 
+axum = { workspace = true }

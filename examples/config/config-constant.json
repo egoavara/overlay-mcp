@@ -2,6 +2,8 @@
     "application": {
         "log_filter": "info",
         "ip_extract": "ConnectInfo",
+        "health_check": true,
+        "prometheus": true,
         "passthrough": [
             {
                 "from": "header:API-KEY"
@@ -11,12 +13,7 @@
     "auth": {
         "authn": {
             "apikey": {
-                "key_from": [
-                    "header:X-API-KEY",
-                    "header:API-KEY",
-                    "query:apikey",
-                    "query:api-key"
-                ]
+                "key_from": ["header:X-API-KEY", "header:API-KEY", "query:apikey", "query:api-key"]
             },
             "jwt": {
                 "type": "oidc-discovery",
@@ -24,27 +21,18 @@
                 "client": {
                     "id": "mcp-db",
                     "secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it here",
-                    "scopes": [
-                        "openid",
-                        "email",
-                        "profile",
-                        "groups"
-                    ]
+                    "scopes": ["openid", "email", "profile", "groups"]
                 }
             }
         },
         "constant": {
             "apikey": {
-                "whitelist": [
-                    "1234567890"
-                ]
+                "whitelist": ["1234567890"]
             },
             "jwt": [
                 {
                     "path": "/email",
-                    "whitelist": [
-                        "egoavara@gmail.com"
-                    ]
+                    "whitelist": ["egoavara@gmail.com"]
                 }
             ]
         }

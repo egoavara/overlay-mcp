@@ -1,19 +1,45 @@
-[package]
-name = "overlay-mcp"
-version = "0.6.2"
+[workspace]
+members = [
+    "crates/httpbuilder",
+    "crates/openfga",
+    "crates/overlay-mcp-auth",
+    "crates/overlay-mcp-cli",
+    "crates/overlay-mcp-core",
+    "crates/overlay-mcp-svr",
+    "crates/overlay-mcp-standalone",
+    "crates/overlay-mcp-resolver",
+    "crates/overlay-mcp-raft",
+    "crates/overlay-mcp-session-manager",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.6.1"
 edition = "2021"
 
-[dependencies]
-async-trait = "0.1"
-async-stream = "0.3"
+[workspace.dependencies]
+httpbuilder = { path = "crates/httpbuilder" }
+openfga = { path = "crates/openfga" }
+overlay-mcp-core = { path = "crates/overlay-mcp-core" }
+overlay-mcp-svr = { path = "crates/overlay-mcp-svr" }
+overlay-mcp-auth = { path = "crates/overlay-mcp-auth" }
+overlay-mcp-resolver = { path = "crates/overlay-mcp-resolver" }
+overlay-mcp-fga = { path = "crates/overlay-mcp-fga" }
+overlay-mcp-standalone = { path = "crates/overlay-mcp-standalone" }
+overlay-mcp-raft = { path = "crates/overlay-mcp-raft" }
+overlay-mcp-session-manager = { path = "crates/overlay-mcp-session-manager" }
+
+# Common dependencies used across workspace members
+# Core Async
 tokio = { version = "1.0", features = ["full"] }
 tokio-stream = { version = "0.1", features = [] }
 tokio-util = { version = "0.7", features = [] }
 futures = { version = "0.3", features = [] }
 futures-lite = { version = "2", features = [] }
 futures-util = { version = "0.3", features = [] }
+async-stream = { version = "0.3", features = [] }
 
-anyhow = { version = "1.0" }
+anyhow = { version = "1.0.88" }
 url = { version = "2.5", features = ["serde"] }
 uuid = { version = "1.16", features = ["v4", "v7", "serde"] }
 
@@ -31,7 +57,7 @@ rmcp = { version = "0.1", features = [
 ] }
 
 http = { version = "1.0" }
-http-body-util = "0.1"
+http-body-util = { version = "0.1", features = [] }
 mime = "0.3"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "cors"] }
@@ -52,10 +78,12 @@ serde_json = "1.0"
 serde_with = { version = "3.12", features = ["guide"] }
 jsonpath-rust = { version = "1.0", features = [] }
 json-patch = { version = "4" }
+jsonptr = { version = "0.7" }
 form_urlencoded = { version = "1.2", features = [] }
 redact = { version = "0.1", features = ["serde", "zeroize"] }
 zeroize = { version = "1.7", features = ["std"] }
 ipnet = { version = "2", features = ["serde"] }
+serde_urlencoded = { version = "0.7" }
 
 oauth2 = { version = "5", features = ["reqwest"] }
 openidconnect = { version = "4.0", features = ["reqwest"] }
@@ -70,6 +98,7 @@ strum = { version = "0.26.3", features = ["derive"] }
 num-traits = "0.2"
 hickory-resolver = "0.25.1"
 regex = { version = "1", features = [] }
+thiserror = { version = "2.0", features = [] }
 
 figment = { version = "0.10", features = ["json", "env"] }
 clap = { version = "4.5", features = ["derive", "env"] }

@@ -1,3 +1,38 @@
+# 설정 (Configuration)
+
+이 문서에서는 `overlay-mcp` 애플리케이션의 설정을 관리하는 방법을 설명합니다. 설정은 [Figment](https://github.com/SergioBenitez/Figment) 라이브러리를 사용하여 관리되며, 설정 파일, 환경 변수, CLI 인자의 조합으로 구성할 수 있습니다.
+
+관련 코드: `src/config.rs`
+
+## 설정 소스 우선순위
+
+Figment는 다음과 같은 우선순위에 따라 설정을 병합합니다 (높을수록 우선순위 높음):
+
+1.  CLI 인자 (예: `--port`, `--proxy` 등)
+2.  환경 변수
+3.  설정 파일 (`config.toml` 또는 CLI `--configfile` 인자로 지정된 파일)
+4.  기본값
+
+## 주요 설정 항목
+
+(추후 `src/config.rs` 분석 후 주요 설정 구조 및 항목 상세 설명 추가 예정)
+
+*   서버 설정 (`server`)
+*   프록시 설정 (`proxy`)
+*   인증 설정 (`auth`)
+    *   OpenID Connect 설정 (`openid_connect`)
+    *   토큰 검증 설정
+*   애플리케이션 설정 (`application`)
+    *   로깅 레벨 (`log_filter`)
+    *   상태 확인 (`health_check`)
+    *   Prometheus 메트릭 (`prometheus`)
+    *   ...
+
+## 관련 문서
+
+*   [프로젝트 개요](./overview.md)
+*   [CLI](./cli.md)
+
 # 설정
 
 `overlay-mcp`는 JSON 형식의 설정 파일을 사용합니다. `-c` 또는 `--config` 플래그 또는 `OVERLAY_MCP_CONFIG_FILE` 환경 변수를 사용하여 설정 파일 경로를 지정해야 합니다.

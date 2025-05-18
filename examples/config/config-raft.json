@@ -12,12 +12,7 @@
         "type": "OpenFga",
         "authn": {
             "apikey": {
-                "key_from": [
-                    "header:X-API-KEY",
-                    "header:API-KEY",
-                    "query:apikey",
-                    "query:api-key"
-                ]
+                "key_from": ["header:X-API-KEY", "header:API-KEY", "query:apikey", "query:api-key"]
             },
             "jwt": {
                 "type": "oidc-discovery",
@@ -25,12 +20,7 @@
                 "client": {
                     "id": "mcp-db",
                     "secret": "Using ${OVERLAY_MCP_OIDC_CLIENT_SECRET} or write it here",
-                    "scopes": [
-                        "openid",
-                        "email",
-                        "profile",
-                        "groups"
-                    ]
+                    "scopes": ["openid", "email", "profile", "groups"]
                 }
             }
         },
@@ -75,18 +65,18 @@
             "nodes": [
                 {
                     "id": 1,
+                    "api": "127.0.0.1:18081",
+                    "raft": "127.0.0.1:18091"
+                },
+                {
+                    "id": 2,
                     "api": "127.0.0.1:28081",
                     "raft": "127.0.0.1:28091"
                 },
                 {
-                    "id": 2,
-                    "api": "127.0.0.1:28082",
-                    "raft": "127.0.0.1:28092"
-                },
-                {
                     "id": 3,
-                    "api": "127.0.0.1:28083",
-                    "raft": "127.0.0.1:28093"
+                    "api": "127.0.0.1:38081",
+                    "raft": "127.0.0.1:38091"
                 }
             ]
         }

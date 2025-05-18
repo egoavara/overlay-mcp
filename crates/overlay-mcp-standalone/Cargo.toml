@@ -1,0 +1,22 @@
+[package]
+name = "overlay-mcp-standalone"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+overlay-mcp-core = { path = "../overlay-mcp-core" }
+
+# Workspace dependencies
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+futures = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+rmcp = { workspace = true }
+http = { workspace = true }

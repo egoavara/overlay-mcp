@@ -193,17 +193,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-recursion"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b43422f69d8ff38f95f1b2bb76517c91589a924d1559a0e935d7c8ce0274c11"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1160,18 +1149,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enum_dispatch"
-version = "0.3.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa18ce2bc66555b3218614519ac839ddb759a7d6720732f979ef8d13be147ecd"
-dependencies = [
- "once_cell",
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1202,29 +1179,6 @@ dependencies = [
  "rand 0.8.5",
  "tokio",
 ]
-
-[[package]]
-name = "eventsource-client"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75810b04951eb0b44bd2800345f6ee15321be90894568bd93aaef9abad1b646c"
-dependencies = [
- "base64 0.22.1",
- "futures",
- "hyper 0.14.32",
- "hyper-rustls 0.24.2",
- "hyper-timeout",
- "log",
- "pin-project",
- "rand 0.8.5",
- "tokio",
-]
-
-[[package]]
-name = "fastrand"
-version = "2.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "fastwebsockets"
@@ -1391,19 +1345,6 @@ name = "futures-io"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e5c1b78ca4aae1ac06c48a526a655760685149f0d465d21f37abfe57ce075c6"
-
-[[package]]
-name = "futures-lite"
-version = "2.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5edaec856126859abb19ed65f39e90fea3a9574b9707f13539acf4abf7eb532"
-dependencies = [
- "fastrand",
- "futures-core",
- "futures-io",
- "parking",
- "pin-project-lite",
-]
 
 [[package]]
 name = "futures-macro"
@@ -1590,14 +1531,12 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hickory-proto"
-version = "0.25.1"
+version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d844af74f7b799e41c78221be863bade11c430d46042c3b49ca8ae0c6d27287"
+checksum = "f8a6fe56c0038198998a6f217ca4e7ef3a5e51f46163bd6dd60b5c71ca6c6502"
 dependencies = [
- "async-recursion",
  "async-trait",
  "cfg-if",
- "critical-section",
  "data-encoding",
  "enum-as-inner",
  "futures-channel",
@@ -1617,9 +1556,9 @@ dependencies = [
 
 [[package]]
 name = "hickory-resolver"
-version = "0.25.1"
+version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a128410b38d6f931fcc6ca5c107a3b02cabd6c05967841269a4ad65d23c44331"
+checksum = "dc62a9a99b0bfb44d2ab95a7208ac952d31060efc16241c87eaf36406fecf87a"
 dependencies = [
  "cfg-if",
  "futures-util",
@@ -1650,7 +1589,7 @@ dependencies = [
  "chrono",
  "cryptr",
  "dotenvy",
- "eventsource-client 0.13.0",
+ "eventsource-client",
  "fastwebsockets",
  "flume",
  "futures-util",
@@ -1781,6 +1720,17 @@ name = "httparse"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
+
+[[package]]
+name = "httpbuilder"
+version = "0.6.1"
+dependencies = [
+ "form_urlencoded",
+ "http 1.3.1",
+ "regex",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "httpdate"
@@ -2165,31 +2115,6 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "json-patch"
-version = "4.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "159294d661a039f7644cea7e4d844e6b25aaf71c1ffe9d73a96d768c24b0faf4"
-dependencies = [
- "jsonptr",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "jsonpath-rust"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a37c2c87b8d16e788ce359660fead0ea5f4ed29ff400d55be74a4e01d1817d9"
-dependencies = [
- "pest",
- "pest_derive",
- "regex",
- "serde_json",
- "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -2590,6 +2515,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
+name = "openfga"
+version = "0.6.1"
+dependencies = [
+ "chrono",
+ "http 1.3.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "openidconnect"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2672,64 +2614,210 @@ dependencies = [
 ]
 
 [[package]]
-name = "overlay-mcp"
-version = "0.6.2"
+name = "overlay-mcp-auth"
+version = "0.6.1"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "httpbuilder",
+ "jsonwebtoken",
+ "oauth2",
+ "openfga",
+ "openidconnect",
+ "overlay-mcp-core",
+ "rand 0.9.0",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+ "tower",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "overlay-mcp-cli"
+version = "0.6.1"
 dependencies = [
  "anyhow",
+ "axum",
+ "clap",
+ "dotenvy",
+ "figment",
+ "httpbuilder",
+ "overlay-mcp-auth",
+ "overlay-mcp-core",
+ "overlay-mcp-svr",
+ "reqwest",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "overlay-mcp-core"
+version = "0.6.1"
+dependencies = [
+ "axum",
+ "axum-client-ip",
+ "clap",
+ "hickory-resolver",
+ "hiqlite",
+ "http 1.3.1",
+ "httpbuilder",
+ "ipnet",
+ "jsonptr",
+ "jsonwebtoken",
+ "mime",
+ "oauth2",
+ "openfga",
+ "openidconnect",
+ "redact",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "serde_with",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "url",
+ "zeroize",
+]
+
+[[package]]
+name = "overlay-mcp-raft"
+version = "0.6.1"
+dependencies = [
+ "futures",
+ "hiqlite",
+ "http 1.3.1",
+ "num-traits",
+ "overlay-mcp-core",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "strum",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "overlay-mcp-resolver"
+version = "0.6.1"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "hickory-resolver",
+ "httpbuilder",
+ "jsonwebtoken",
+ "oauth2",
+ "openidconnect",
+ "overlay-mcp-core",
+ "rand 0.9.0",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "overlay-mcp-session-manager"
+version = "0.6.1"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "http 1.3.1",
+ "httpbuilder",
+ "jsonwebtoken",
+ "oauth2",
+ "openidconnect",
+ "overlay-mcp-core",
+ "overlay-mcp-raft",
+ "overlay-mcp-standalone",
+ "rand 0.9.0",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "overlay-mcp-standalone"
+version = "0.6.1"
+dependencies = [
+ "futures",
+ "http 1.3.1",
+ "overlay-mcp-core",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "overlay-mcp-svr"
+version = "0.6.1"
+dependencies = [
  "async-stream",
- "async-trait",
  "axum",
  "axum-client-ip",
  "axum-extra",
  "axum-health",
  "axum-prometheus",
- "base64 0.22.1",
  "chrono",
- "clap",
- "dotenvy",
- "enum_dispatch",
- "eventsource-client 0.15.0",
- "figment",
- "form_urlencoded",
  "futures",
- "futures-lite",
  "futures-util",
- "hickory-resolver",
- "hiqlite",
  "http 1.3.1",
  "http-body-util",
- "hyper 1.6.0",
- "hyper-util",
- "ipnet",
- "json-patch",
- "jsonpath-rust",
- "jsonwebtoken",
+ "httpbuilder",
  "mime",
- "num-traits",
  "oauth2",
- "openidconnect",
+ "overlay-mcp-auth",
+ "overlay-mcp-core",
+ "overlay-mcp-raft",
+ "overlay-mcp-resolver",
+ "overlay-mcp-session-manager",
  "rand 0.9.0",
- "redact",
- "regex",
  "reqwest",
  "rmcp",
  "serde",
  "serde_json",
- "serde_with",
- "sha2",
- "strum",
  "tokio",
- "tokio-stream",
  "tokio-util",
  "tower",
  "tower-http",
  "tracing",
- "tracing-core",
- "tracing-subscriber",
  "url",
  "uuid",
- "valuable",
- "zeroize",
 ]
 
 [[package]]
@@ -2761,12 +2849,6 @@ dependencies = [
  "primeorder",
  "sha2",
 ]
-
-[[package]]
-name = "parking"
-version = "2.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba"
 
 [[package]]
 name = "parking_lot"
@@ -2855,51 +2937,6 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
-
-[[package]]
-name = "pest"
-version = "2.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "198db74531d58c70a361c42201efde7e2591e976d518caf7662a47dc5720e7b6"
-dependencies = [
- "memchr",
- "thiserror 2.0.12",
- "ucd-trie",
-]
-
-[[package]]
-name = "pest_derive"
-version = "2.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d725d9cfd79e87dccc9341a2ef39d1b6f6353d68c4b33c177febbe1a402c97c5"
-dependencies = [
- "pest",
- "pest_generator",
-]
-
-[[package]]
-name = "pest_generator"
-version = "2.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db7d01726be8ab66ab32f9df467ae8b1148906685bbe75c82d1e65d7f5b3f841"
-dependencies = [
- "pest",
- "pest_meta",
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
-name = "pest_meta"
-version = "2.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f9f832470494906d1fca5329f8ab5791cc60beb230c74815dff541cbd2b5ca0"
-dependencies = [
- "once_cell",
- "pest",
- "sha2",
-]
 
 [[package]]
 name = "pin-project"
@@ -3355,12 +3392,9 @@ dependencies = [
 
 [[package]]
 name = "resolv-conf"
-version = "0.7.1"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48375394603e3dd4b2d64371f7148fd8c7baa2680e28741f2cb8d23b59e3d4c4"
-dependencies = [
- "hostname",
-]
+checksum = "fc7c8f7f733062b66dc1c63f9db168ac0b97a9210e247fa90fdc9ad08f51b302"
 
 [[package]]
 name = "rfc6979"
@@ -4487,12 +4521,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 
 [[package]]
-name = "ucd-trie"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
-
-[[package]]
 name = "uncased"
 version = "0.9.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4595,20 +4623,6 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-dependencies = [
- "valuable-derive",
-]
-
-[[package]]
-name = "valuable-derive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e3a32a9bcc0f6c6ccfd5b27bcf298c58e753bcc9eeff268157a303393183a6d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
 
 [[package]]
 name = "version_check"

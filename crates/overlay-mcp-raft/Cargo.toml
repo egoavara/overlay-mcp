@@ -1,0 +1,27 @@
+[package]
+name = "overlay-mcp-raft"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+overlay-mcp-core = { path = "../overlay-mcp-core" }
+
+# Workspace dependencies
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+rmcp = { workspace = true }
+reqwest = { workspace = true }
+futures = { workspace = true }
+hiqlite = { workspace = true }
+strum = { workspace = true }
+num-traits = { workspace = true }
+http = { workspace = true }
+# Specific dependencies for Raft (example)
+# openraft = "..."
